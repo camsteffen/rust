@@ -1,5 +1,7 @@
 #![warn(clippy::explicit_counter_loop)]
 
+use std::path::{Path, PathBuf};
+
 fn main() {
     let mut vec = vec![1, 2, 3, 4];
     let mut _index = 0;
@@ -20,6 +22,18 @@ fn main() {
 
     let mut _index = 0;
     for _v in vec {
+        _index += 1;
+    }
+
+    let path = Path::new("");
+    let mut _index = 0;
+    for _v in path.iter() {
+        _index += 1
+    }
+
+    let pathbuf = PathBuf::new();
+    let mut _index = 0;
+    for _v in pathbuf.iter() {
         _index += 1;
     }
 }
