@@ -449,7 +449,7 @@ pub fn trait_ref_of_method<'tcx>(cx: &LateContext<'tcx>, hir_id: HirId) -> Optio
 
 /// Checks whether this type implements `Drop`.
 pub fn has_drop<'tcx>(cx: &LateContext<'tcx>, ty: Ty<'tcx>) -> bool {
-    match ty.ty_adt_def() {
+    match ty.adt_def() {
         Some(def) => def.has_dtor(cx.tcx),
         None => false,
     }

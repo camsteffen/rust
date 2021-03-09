@@ -1064,7 +1064,7 @@ impl<'tcx> Visitor<'tcx> for NamePrivacyVisitor<'tcx> {
     fn visit_expr(&mut self, expr: &'tcx hir::Expr<'tcx>) {
         if let hir::ExprKind::Struct(ref qpath, fields, ref base) = expr.kind {
             let res = self.typeck_results().qpath_res(qpath, expr.hir_id);
-            let adt = self.typeck_results().expr_ty(expr).ty_adt_def().unwrap();
+            let adt = self.typeck_results().expr_ty(expr).adt_def().unwrap();
             let variant = adt.variant_of_res(res);
             if let Some(ref base) = *base {
                 // If the expression uses FRU we need to make sure all the unmentioned fields
@@ -1095,7 +1095,7 @@ impl<'tcx> Visitor<'tcx> for NamePrivacyVisitor<'tcx> {
     fn visit_pat(&mut self, pat: &'tcx hir::Pat<'tcx>) {
         if let PatKind::Struct(ref qpath, fields, _) = pat.kind {
             let res = self.typeck_results().qpath_res(qpath, pat.hir_id);
-            let adt = self.typeck_results().pat_ty(pat).ty_adt_def().unwrap();
+            let adt = self.typeck_results().pat_ty(pat).adt_def().unwrap();
             let variant = adt.variant_of_res(res);
             for field in fields {
                 let use_ctxt = field.ident.span;

@@ -243,7 +243,7 @@ impl<'a, 'tcx> Visitor<'tcx> for UnsafetyChecker<'a, 'tcx> {
             }
 
             let base_ty = base.ty(self.body, self.tcx).ty;
-            if base_ty.ty_adt_def().map_or(false, |adt| adt.is_union()) {
+            if base_ty.adt_def().map_or(false, |adt| adt.is_union()) {
                 // If we did not hit a `Deref` yet and the overall place use is an assignment, the
                 // rules are different.
                 let assign_to_field = !saw_deref
@@ -261,9 +261,8 @@ impl<'a, 'tcx> Visitor<'tcx> for UnsafetyChecker<'a, 'tcx> {
                     // old value is being dropped.
                     let assigned_ty = place.ty(&self.body.local_decls, self.tcx).ty;
                     // To avoid semver hazard, we only consider `Copy` and `ManuallyDrop` non-dropping.
-                    let manually_drop = assigned_ty
-                        .ty_adt_def()
-                        .map_or(false, |adt_def| adt_def.is_manually_drop());
+                    let manually_drop =
+                        assigned_ty.adt_def().map_or(false, |adt_def| adt_def.is_manually_drop());
                     let nodrop = manually_drop
                         || assigned_ty.is_copy_modulo_regions(
                             self.tcx.at(self.source_info.span),

@@ -854,7 +854,7 @@ impl<'tcx> DumpVisitor<'tcx> {
             hir::PatKind::Struct(ref _path, fields, _) => {
                 // FIXME do something with _path?
                 let adt = match self.save_ctxt.typeck_results().node_type_opt(p.hir_id) {
-                    Some(ty) if ty.ty_adt_def().is_some() => ty.ty_adt_def().unwrap(),
+                    Some(ty) if ty.adt_def().is_some() => ty.adt_def().unwrap(),
                     _ => {
                         intravisit::walk_pat(self, p);
                         return;
@@ -1362,7 +1362,7 @@ impl<'tcx> Visitor<'tcx> for DumpVisitor<'tcx> {
             hir::ExprKind::Struct(ref path, ref fields, ref rest) => {
                 let hir_expr = self.save_ctxt.tcx.hir().expect_expr(ex.hir_id);
                 let adt = match self.save_ctxt.typeck_results().expr_ty_opt(&hir_expr) {
-                    Some(ty) if ty.ty_adt_def().is_some() => ty.ty_adt_def().unwrap(),
+                    Some(ty) if ty.adt_def().is_some() => ty.adt_def().unwrap(),
                     _ => {
                         intravisit::walk_expr(self, ex);
                         return;

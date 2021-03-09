@@ -431,7 +431,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                     tcx.sess.diagnostic().struct_dummy()
                 };
 
-                if let Some(def) = actual.ty_adt_def() {
+                if let Some(def) = actual.adt_def() {
                     if let Some(full_sp) = tcx.hir().span_if_local(def.did) {
                         let def_sp = tcx.sess.source_map().guess_head_span(full_sp);
                         err.span_label(
@@ -758,7 +758,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 // Don't emit a suggestion if we found an actual method
                 // that had unsatisfied trait bounds
                 if unsatisfied_predicates.is_empty() && actual.is_enum() {
-                    let adt_def = actual.ty_adt_def().expect("enum is not an ADT");
+                    let adt_def = actual.adt_def().expect("enum is not an ADT");
                     if let Some(suggestion) = lev_distance::find_best_match_for_name(
                         &adt_def.variants.iter().map(|s| s.ident.name).collect::<Vec<_>>(),
                         item_name.name,

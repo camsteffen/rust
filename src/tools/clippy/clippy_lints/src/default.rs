@@ -128,7 +128,7 @@ impl LateLintPass<'_> for Default {
                 // only when assigning `... = Default::default()`
                 if is_expr_default(expr, cx);
                 let binding_type = cx.typeck_results().node_type(binding_id);
-                if let Some(adt) = binding_type.ty_adt_def();
+                if let Some(adt) = binding_type.adt_def();
                 if adt.is_struct();
                 let variant = adt.non_enum_variant();
                 if adt.did.is_local() || !variant.is_field_list_non_exhaustive();

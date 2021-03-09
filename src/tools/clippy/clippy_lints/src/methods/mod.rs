@@ -3094,7 +3094,7 @@ fn lint_filter_map<'tcx>(cx: &LateContext<'tcx>, expr: &'tcx hir::Expr<'_>, is_f
         // closure ends with is_some() or is_ok()
         if let PatKind::Binding(_, filter_param_id, _, None) = filter_pat.kind;
         if let ExprKind::MethodCall(path, _, [filter_arg], _) = filter_body.value.kind;
-        if let Some(opt_ty) = cx.typeck_results().expr_ty(filter_arg).ty_adt_def();
+        if let Some(opt_ty) = cx.typeck_results().expr_ty(filter_arg).adt_def();
         if let Some(is_result) = if cx.tcx.is_diagnostic_item(sym::option_type, opt_ty.did) {
             Some(false)
         } else if cx.tcx.is_diagnostic_item(sym::result_type, opt_ty.did) {

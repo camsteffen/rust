@@ -1689,6 +1689,14 @@ impl<'tcx> TyS<'tcx> {
     }
 
     #[inline]
+    pub fn adt_def(&self) -> Option<&'tcx AdtDef> {
+        match self.kind() {
+            Adt(adt, _) => Some(adt),
+            _ => None,
+        }
+    }
+
+    #[inline]
     pub fn is_unit(&self) -> bool {
         match self.kind() {
             Tuple(ref tys) => tys.is_empty(),
@@ -1993,14 +2001,6 @@ impl<'tcx> TyS<'tcx> {
     #[inline]
     pub fn is_impl_trait(&self) -> bool {
         matches!(self.kind(), Opaque(..))
-    }
-
-    #[inline]
-    pub fn ty_adt_def(&self) -> Option<&'tcx AdtDef> {
-        match self.kind() {
-            Adt(adt, _) => Some(adt),
-            _ => None,
-        }
     }
 
     /// Iterates over tuple fields.

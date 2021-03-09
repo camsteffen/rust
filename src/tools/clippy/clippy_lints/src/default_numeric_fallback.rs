@@ -134,7 +134,7 @@ impl<'a, 'tcx> Visitor<'tcx> for NumericFallbackVisitor<'a, 'tcx> {
                 if_chain! {
                     if let Some(def_id) = self.cx.qpath_res(qpath, expr.hir_id).opt_def_id();
                     let ty = self.cx.tcx.type_of(def_id);
-                    if let Some(adt_def) = ty.ty_adt_def();
+                    if let Some(adt_def) = ty.adt_def();
                     if adt_def.is_struct();
                     if let Some(variant) = adt_def.variants.iter().next();
                     then {

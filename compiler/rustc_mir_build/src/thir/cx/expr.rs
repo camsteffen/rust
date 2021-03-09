@@ -185,7 +185,7 @@ fn make_mirror_unadjusted<'a, 'tcx>(
                 let adt_data =
                     if let hir::ExprKind::Path(hir::QPath::Resolved(_, ref path)) = fun.kind {
                         // Tuple-like ADTs are represented as ExprKind::Call. We convert them here.
-                        expr_ty.ty_adt_def().and_then(|adt_def| match path.res {
+                        expr_ty.adt_def().and_then(|adt_def| match path.res {
                             Res::Def(DefKind::Ctor(_, CtorKind::Fn), ctor_id) => {
                                 Some((adt_def, adt_def.variant_index_with_ctor_id(ctor_id)))
                             }
@@ -585,7 +585,7 @@ fn make_mirror_unadjusted<'a, 'tcx>(
                 // so we wouldn't have to compute and store the actual value
                 let var = if let hir::ExprKind::Path(ref qpath) = source.kind {
                     let res = cx.typeck_results().qpath_res(qpath, source.hir_id);
-                    cx.typeck_results().node_type(source.hir_id).ty_adt_def().and_then(|adt_def| {
+                    cx.typeck_results().node_type(source.hir_id).adt_def().and_then(|adt_def| {
                         match res {
                             Res::Def(
                                 DefKind::Ctor(CtorOf::Variant, CtorKind::Const),

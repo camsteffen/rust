@@ -773,7 +773,7 @@ impl<'rt, 'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> ValueVisitor<'mir, 'tcx, M>
         assert!(op.layout.ty.builtin_deref(true).is_none());
 
         // Special check preventing `UnsafeCell` in the inner part of constants
-        if let Some(def) = op.layout.ty.ty_adt_def() {
+        if let Some(def) = op.layout.ty.adt_def() {
             if matches!(self.ctfe_mode, Some(CtfeValidationMode::Const { inner: true, .. }))
                 && Some(def.did) == self.ecx.tcx.lang_items().unsafe_cell_type()
             {

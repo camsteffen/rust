@@ -168,7 +168,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
         // This is also included through the generics list as `Self`,
         // but the parser won't allow you to use it
         flags.push((sym::_Self, Some(self_ty.to_string())));
-        if let Some(def) = self_ty.ty_adt_def() {
+        if let Some(def) = self_ty.adt_def() {
             // We also want to be able to select self's original
             // signature with no type arguments resolved
             flags.push((sym::_Self, Some(self.tcx.type_of(def.did).to_string())));
@@ -185,7 +185,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
             flags.push((name, Some(value)));
         }
 
-        if let Some(true) = self_ty.ty_adt_def().map(|def| def.did.is_local()) {
+        if let Some(true) = self_ty.adt_def().map(|def| def.did.is_local()) {
             flags.push((sym::crate_local, None));
         }
 
@@ -197,7 +197,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
         if let ty::Array(aty, len) = self_ty.kind() {
             flags.push((sym::_Self, Some("[]".to_owned())));
             flags.push((sym::_Self, Some(format!("[{}]", aty))));
-            if let Some(def) = aty.ty_adt_def() {
+            if let Some(def) = aty.adt_def() {
                 // We also want to be able to select the array's type's original
                 // signature with no type arguments resolved
                 let type_string = self.tcx.type_of(def.did).to_string();

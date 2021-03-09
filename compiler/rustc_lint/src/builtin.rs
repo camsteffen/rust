@@ -240,7 +240,7 @@ impl<'tcx> LateLintPass<'tcx> for NonShorthandFieldPatterns {
             let variant = cx
                 .typeck_results()
                 .pat_ty(pat)
-                .ty_adt_def()
+                .adt_def()
                 .expect("struct pattern type is not an ADT")
                 .variant_of_res(cx.qpath_res(qpath, pat.hir_id));
             for fieldpat in field_pats {
@@ -831,7 +831,7 @@ impl<'tcx> LateLintPass<'tcx> for MissingDebugImplementations {
         if self.impling_types.is_none() {
             let mut impls = LocalDefIdSet::default();
             cx.tcx.for_each_impl(debug, |d| {
-                if let Some(ty_def) = cx.tcx.type_of(d).ty_adt_def() {
+                if let Some(ty_def) = cx.tcx.type_of(d).adt_def() {
                     if let Some(def_id) = ty_def.did.as_local() {
                         impls.insert(def_id);
                     }

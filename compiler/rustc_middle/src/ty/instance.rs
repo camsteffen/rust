@@ -215,7 +215,7 @@ impl<'tcx> InstanceDef<'tcx> {
             // We include enums without destructors to allow, say, optimizing
             // drops of `Option::None` before LTO. We also respect the intent of
             // `#[inline]` on `Drop::drop` implementations.
-            return ty.ty_adt_def().map_or(true, |adt_def| {
+            return ty.adt_def().map_or(true, |adt_def| {
                 adt_def.destructor(tcx).map_or(adt_def.is_enum(), |dtor| {
                     tcx.codegen_fn_attrs(dtor.did).requests_inline()
                 })

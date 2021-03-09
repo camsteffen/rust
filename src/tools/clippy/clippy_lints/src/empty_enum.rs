@@ -51,7 +51,7 @@ impl<'tcx> LateLintPass<'tcx> for EmptyEnum {
 
         if let ItemKind::Enum(..) = item.kind {
             let ty = cx.tcx.type_of(item.def_id);
-            let adt = ty.ty_adt_def().expect("already checked whether this is an enum");
+            let adt = ty.adt_def().expect("already checked whether this is an enum");
             if adt.variants.is_empty() {
                 span_lint_and_help(
                     cx,

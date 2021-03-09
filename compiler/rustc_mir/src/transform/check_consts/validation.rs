@@ -774,7 +774,7 @@ impl Visitor<'tcx> for Validator<'mir, 'tcx> {
             | ProjectionElem::Field(..)
             | ProjectionElem::Index(_) => {
                 let base_ty = Place::ty_from(place_local, proj_base, self.body, self.tcx).ty;
-                match base_ty.ty_adt_def() {
+                match base_ty.adt_def() {
                     Some(def) if def.is_union() => {
                         self.check_op(ops::UnionAccess);
                     }

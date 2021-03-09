@@ -732,7 +732,7 @@ impl<'cx, 'tcx> MirBorrowckCtxt<'cx, 'tcx> {
             // Need to use fn call syntax `PlaceRef::ty` to determine the type of `place_base`;
             // using a type annotation in the closure argument instead leads to a lifetime error.
             let ty = PlaceRef::ty(&place_base, self.body, self.infcx.tcx).ty;
-            ty.ty_adt_def().filter(|adt| adt.is_union()).map(|_| ty)
+            ty.adt_def().filter(|adt| adt.is_union()).map(|_| ty)
         };
 
         // Start with an empty tuple, so we can use the functions on `Option` to reduce some

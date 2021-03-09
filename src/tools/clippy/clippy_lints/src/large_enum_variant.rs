@@ -64,7 +64,7 @@ impl<'tcx> LateLintPass<'tcx> for LargeEnumVariant {
         }
         if let ItemKind::Enum(ref def, _) = item.kind {
             let ty = cx.tcx.type_of(item.def_id);
-            let adt = ty.ty_adt_def().expect("already checked whether this is an enum");
+            let adt = ty.adt_def().expect("already checked whether this is an enum");
 
             let mut largest_variant: Option<(_, _)> = None;
             let mut second_variant: Option<(_, _)> = None;

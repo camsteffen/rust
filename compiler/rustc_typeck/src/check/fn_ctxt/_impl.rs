@@ -1170,7 +1170,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         match res {
             Res::Def(DefKind::Ctor(CtorOf::Variant, _), _) => {
                 if let Some(self_ty) = self_ty {
-                    let adt_def = self_ty.ty_adt_def().unwrap();
+                    let adt_def = self_ty.adt_def().unwrap();
                     user_self_ty = Some(UserSelfTy { impl_def_id: adt_def.did, self_ty });
                     is_alias_variant_ctor = true;
                 }
@@ -1281,7 +1281,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                         span,
                         "the `Self` constructor can only be used with tuple or unit structs",
                     );
-                    if let Some(adt_def) = ty.ty_adt_def() {
+                    if let Some(adt_def) = ty.adt_def() {
                         match adt_def.adt_kind() {
                             AdtKind::Enum => {
                                 err.help("did you mean to use one of the enum's variants?");

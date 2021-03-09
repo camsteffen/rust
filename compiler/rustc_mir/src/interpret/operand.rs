@@ -722,7 +722,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                             let variants_len = op
                                 .layout
                                 .ty
-                                .ty_adt_def()
+                                .adt_def()
                                 .expect("tagged layout for non adt")
                                 .variants
                                 .len();

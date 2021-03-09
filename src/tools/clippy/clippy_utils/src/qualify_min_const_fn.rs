@@ -245,7 +245,7 @@ fn check_place(tcx: TyCtxt<'tcx>, place: Place<'tcx>, span: Span, body: &Body<'t
         match elem {
             ProjectionElem::Field(..) => {
                 let base_ty = Place::ty_from(place.local, &proj_base, body, tcx).ty;
-                if let Some(def) = base_ty.ty_adt_def() {
+                if let Some(def) = base_ty.adt_def() {
                     // No union field accesses in `const fn`
                     if def.is_union() {
                         return Err((span, "accessing union fields is unstable".into()));

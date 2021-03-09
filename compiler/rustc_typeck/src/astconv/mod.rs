@@ -1677,7 +1677,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                         qself_ty,
                     );
 
-                    let adt_def = qself_ty.ty_adt_def().expect("enum is not an ADT");
+                    let adt_def = qself_ty.adt_def().expect("enum is not an ADT");
                     if let Some(suggested_name) = find_best_match_for_name(
                         &adt_def
                             .variants
@@ -1976,7 +1976,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
 
             // Case 2. Reference to a variant constructor.
             DefKind::Ctor(CtorOf::Variant, ..) | DefKind::Variant => {
-                let adt_def = self_ty.map(|t| t.ty_adt_def().unwrap());
+                let adt_def = self_ty.map(|t| t.adt_def().unwrap());
                 let (generics_def_id, index) = if let Some(adt_def) = adt_def {
                     debug_assert!(adt_def.is_enum());
                     (adt_def.did, last)

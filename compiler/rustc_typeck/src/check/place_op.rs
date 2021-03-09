@@ -220,7 +220,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 // Clear previous flag; after a pointer indirection it does not apply any more.
                 inside_union = false;
             }
-            if source.ty_adt_def().map_or(false, |adt| adt.is_union()) {
+            if source.adt_def().map_or(false, |adt| adt.is_union()) {
                 inside_union = true;
             }
             // Fix up the autoderefs. Autorefs can only occur immediately preceding
@@ -247,7 +247,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                             // If this is a union field, also throw an error for `DerefMut` of `ManuallyDrop` (see RFC 2514).
                             // This helps avoid accidental drops.
                             if inside_union
-                                && source.ty_adt_def().map_or(false, |adt| adt.is_manually_drop())
+                                && source.adt_def().map_or(false, |adt| adt.is_manually_drop())
                             {
                                 let mut err = self.tcx.sess.struct_span_err(
                                     expr.span,
