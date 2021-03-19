@@ -613,24 +613,23 @@ impl<'a, 'b> Context<'a, 'b> {
     fn build_count(&self, c: parse::Count) -> P<ast::Expr> {
         let sp = self.macsp;
         let count = |c, arg| {
-            let mut path = Context::rtpath(self.ecx, sym::Count);
-            path.push(Ident::new(c, sp));
+            let path = vec![Ident::new(c, sp)];
             match arg {
                 Some(arg) => self.ecx.expr_call_global(sp, path, vec![arg]),
                 None => self.ecx.expr_path(self.ecx.path_global(sp, path)),
             }
         };
         match c {
-            parse::CountIs(i) => count(sym::Is, Some(self.ecx.expr_usize(sp, i))),
+            parse::CountIs(i) => count(sym::Some, Some(self.ecx.expr_usize(sp, i))),
             parse::CountIsParam(i) => {
                 // This needs mapping too, as `i` is referring to a macro
                 // argument. If `i` is not found in `count_positions` then
                 // the error had already been emitted elsewhere.
                 let i = self.count_positions.get(&i).cloned().unwrap_or(0)
                     + self.count_args_index_offset;
-                count(sym::Param, Some(self.ecx.expr_usize(sp, i)))
+                count(sym::Some, Some(self.ecx.expr_usize(sp, i)))
             }
-            parse::CountImplied => count(sym::Implied, None),
+            parse::CountImplied => count(sym::None, None),
             // should never be the case, names are already resolved
             parse::CountIsName(_) => panic!("should never happen"),
         }
@@ -794,7 +793,9 @@ impl<'a, 'b> Context<'a, 'b> {
             for arg_ty in self.arg_unique_types[i].iter() {
                 locals.push(Context::format_arg(self.ecx, self.macsp, e.span, arg_ty, name));
             }
-            heads.push(self.ecx.expr_addr_of(e.span, e));
+            let arg = self.ecx.expr_addr_of(e.span, e);
+            Context::format_arg(self.ecx, self.macsp, span, &Count, name)
+            heads.push();
         }
         for pos in self.count_args {
             let index = match pos {
@@ -847,13 +848,13 @@ impl<'a, 'b> Context<'a, 'b> {
 
         // Now create the fmt::Arguments struct with all our locals we created.
         let (fn_name, fn_args) = if self.all_pieces_simple {
-            ("new_v1", vec![pieces, args_slice])
+            ("new_v2", vec![pieces, args_slice])
         } else {
             // Build up the static array which will store our precompiled
             // nonstandard placeholders, if there are any.
             let fmt = self.ecx.expr_vec_slice(self.macsp, self.pieces);
 
-            ("new_v1_formatted", vec![pieces, args_slice, fmt])
+            ("new_v2_formatted", vec![pieces, args_slice, fmt])
         };
 
         let path = self.ecx.std_path(&[sym::fmt, sym::Arguments, Symbol::intern(fn_name)]);

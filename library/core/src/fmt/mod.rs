@@ -36,6 +36,7 @@ pub use self::builders::{DebugList, DebugMap, DebugSet, DebugStruct, DebugTuple}
 #[doc(hidden)]
 pub mod rt {
     pub mod v1;
+    pub mod v2;
 }
 
 /// The type returned by formatter methods.
@@ -311,7 +312,18 @@ impl<'a> Arguments<'a> {
     #[inline]
     #[unstable(feature = "fmt_internals", reason = "internal to format_args!", issue = "none")]
     pub fn new_v1(pieces: &'a [&'static str], args: &'a [ArgumentV1<'a>]) -> Arguments<'a> {
-        Arguments { pieces, fmt: None, args }
+        Arguments {
+            args: ArgumentsInner::Simple(&[]),
+            last: None,
+            old: Some(OldArguments { pieces, fmt: None, args })
+        }
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    #[unstable(feature = "fmt_internals", reason = "internal to format_args!", issue = "none")]
+    pub fn new_v2(args: &'a [Arg<'a>], last: Option<&'static str>) -> Self {
+        Self { args: ArgumentsInner::Simple(args), last, old: None }
     }
 
     /// This function is used to specify nonstandard formatting parameters.
@@ -328,7 +340,18 @@ impl<'a> Arguments<'a> {
         args: &'a [ArgumentV1<'a>],
         fmt: &'a [rt::v1::Argument],
     ) -> Arguments<'a> {
-        Arguments { pieces, fmt: Some(fmt), args }
+        Arguments {
+            args: ArgumentsInner::Simple(&[]),
+            last: None,
+            old: Some(OldArguments { pieces, fmt: Some(fmt), args })
+        }
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    #[unstable(feature = "fmt_internals", reason = "internal to format_args!", issue = "none")]
+    pub fn new_v2_formatted(args: &'a [FormatArg<'a>], last: Option<&'static str>) -> Self {
+        Self { args: ArgumentsInner::Formatted(args), last, old: None }
     }
 
     /// Estimates the length of the formatted text.
@@ -339,20 +362,29 @@ impl<'a> Arguments<'a> {
     #[inline]
     #[unstable(feature = "fmt_internals", reason = "internal to format_args!", issue = "none")]
     pub fn estimated_capacity(&self) -> usize {
-        let pieces_length: usize = self.pieces.iter().map(|x| x.len()).sum();
+        let (pieces_length, first_piece) = match self.args {
+            ArgumentsInner::Simple(args) => {
+                (args.iter().map(|a| a.before.len()).sum(), args.get(0).map(|a| a.before))
+            }
+            ArgumentsInner::Formatted(args) => {
+                (args.iter().map(|a| a.before.len()).sum(), args.get(0).map(|a| a.before))
+            }
+        };
 
-        if self.args.is_empty() {
-            pieces_length
-        } else if self.pieces[0] == "" && pieces_length < 16 {
-            // If the format string starts with an argument,
-            // don't preallocate anything, unless length
-            // of pieces is significant.
-            0
-        } else {
-            // There are some arguments, so any additional push
-            // will reallocate the string. To avoid that,
-            // we're "pre-doubling" the capacity here.
-            pieces_length.checked_mul(2).unwrap_or(0)
+        match first_piece {
+            None => pieces_length,
+            Some("") if pieces_length < 16 => {
+                // If the format string starts with an argument,
+                // don't preallocate anything, unless length
+                // of pieces is significant.
+                0
+            }
+            Some(_) => {
+                // There are some arguments, so any additional push
+                // will reallocate the string. To avoid that,
+                // we're "pre-doubling" the capacity here.
+                pieces_length.checked_mul(2).unwrap_or(0)
+            }
         }
     }
 }
@@ -382,6 +414,15 @@ impl<'a> Arguments<'a> {
 #[stable(feature = "rust1", since = "1.0.0")]
 #[derive(Copy, Clone)]
 pub struct Arguments<'a> {
+    args: ArgumentsInner<'a>,
+    last: Option<&'static str>,
+    old: Option<OldArguments<'a>>,
+}
+
+#[doc(hidden)]
+#[unstable(feature = "fmt_internals", reason = "internal to format_args!", issue = "none")]
+#[derive(Copy, Clone)]
+pub struct OldArguments<'a> {
     // Format string pieces to print.
     pieces: &'a [&'static str],
 
@@ -391,6 +432,98 @@ pub struct Arguments<'a> {
     // Dynamic arguments for interpolation, to be interleaved with string
     // pieces. (Every argument is preceded by a string piece.)
     args: &'a [ArgumentV1<'a>],
+}
+
+#[doc(hidden)]
+#[unstable(feature = "fmt_internals", reason = "internal to format_args!", issue = "none")]
+#[derive(Clone, Copy)]
+pub enum ArgumentsInner<'a> {
+    Simple(&'a [Arg<'a>]),
+    Formatted(&'a [FormatArg<'a>]),
+}
+
+#[doc(hidden)]
+#[unstable(feature = "fmt_internals", reason = "internal to format_args!", issue = "none")]
+pub struct Arg<'a> {
+    before: &'static str,
+    arg: ArgumentV1<'a>,
+}
+
+#[doc(hidden)]
+#[unstable(feature = "fmt_internals", reason = "internal to format_args!", issue = "none")]
+pub struct FormatArg<'a> {
+    before: &'static str,
+    format: rt::v2::FormatSpec,
+    arg: &'a ArgumentV1<'a>,
+}
+
+fn new_fmt_args_test(w: &mut dyn Write) {
+    let x = 1;
+    // new
+    write(
+        w,
+        Arguments::new_v2(
+            &match (&x, &0) {
+                (arg0, arg1) => [
+                    Arg {
+                        before: "x is ",
+                        arg: ArgumentV1::new(arg0, Display::fmt),
+                    },
+                    Arg {
+                        before: " again ",
+                        arg: ArgumentV1::new(arg1, Display::fmt),
+                    },
+                ],
+            },
+            Some("\n"),
+        ),
+    );
+    write(
+        w,
+        Arguments::new_v2_formatted(
+            {
+                let (arg0, arg1) = (&x, &0);
+                &match (ArgumentV1::new(arg0, Display::fmt), ArgumentV1::new(arg1, Display::fmt)) {
+                    (ref arg0, ref arg1) => [
+                        FormatArg {
+                            before: "x is ",
+                            format: rt::v2::FormatSpec {
+                                fill: ' ',
+                                align: rt::v2::Alignment::Unknown,
+                                flags: 0u32,
+                                precision: None,
+                                width: None,
+                            },
+                            arg: arg0,
+                        },
+                        FormatArg {
+                            before: " again ",
+                            format: rt::v2::FormatSpec {
+                                fill: ' ',
+                                align: rt::v2::Alignment::Unknown,
+                                flags: 0u32,
+                                precision: None,
+                                width: None,
+                            },
+                            arg: arg0,
+                        },
+                        FormatArg {
+                            before: " zerof ",
+                            format: rt::v2::FormatSpec {
+                                fill: ' ',
+                                align: rt::v2::Alignment::Unknown,
+                                flags: 8u32,
+                                precision: None,
+                                width: Some(4usize),
+                            },
+                            arg: arg1,
+                        },
+                    ],
+                }
+            },
+            Some("\n"),
+        ),
+    );
 }
 
 impl<'a> Arguments<'a> {
@@ -422,9 +555,13 @@ impl<'a> Arguments<'a> {
     #[stable(feature = "fmt_as_str", since = "1.52.0")]
     #[inline]
     pub fn as_str(&self) -> Option<&'static str> {
-        match (self.pieces, self.args) {
-            ([], []) => Some(""),
-            ([s], []) => Some(s),
+        match (self.args, self.last) {
+            (ArgumentsInner::Simple(&[]) | ArgumentsInner::Formatted(&[]), None) => Some(""),
+            (
+                ArgumentsInner::Simple(&[Arg { before, .. }])
+                | ArgumentsInner::Formatted(&[FormatArg { before, .. }]),
+                None,
+            ) => Some(before),
             _ => None,
         }
     }
@@ -1073,6 +1210,51 @@ pub trait UpperExp {
 /// [`write!`]: crate::write!
 #[stable(feature = "rust1", since = "1.0.0")]
 pub fn write(output: &mut dyn Write, args: Arguments<'_>) -> Result {
+    if let Some(old) = args.old {
+        return old_write(output, old)
+    }
+
+    let mut formatter = Formatter {
+        flags: 0,
+        width: None,
+        precision: None,
+        buf: output,
+        align: rt::v1::Alignment::Unknown,
+        fill: ' ',
+    };
+
+    match args.args {
+        ArgumentsInner::Simple(args) => {
+            // We can use default formatting parameters for all arguments.
+            for &Arg { before, arg } in args {
+                formatter.buf.write_str(before)?;
+                (arg.formatter)(arg.value, &mut formatter)?;
+            }
+        }
+        ArgumentsInner::Formatted(args) => {
+            // Every spec has a corresponding argument that is preceded by
+            // a string piece.
+            for &FormatArg { before, ref format, arg } in args {
+                formatter.buf.write_str(before)?;
+                formatter.fill = format.fill;
+                formatter.align = format.align;
+                formatter.flags = format.flags;
+                formatter.width = format.width;
+                formatter.precision = format.precision;
+                (arg.formatter)(arg.value, &mut formatter)?;
+            }
+        }
+    }
+
+    // There can be only one trailing string piece left.
+    if let Some(piece) = args.last {
+        formatter.buf.write_str(piece)?;
+    }
+
+    Ok(())
+}
+
+fn old_write(output: &mut dyn Write, args: OldArguments<'_>) -> Result {
     let mut formatter = Formatter {
         flags: 0,
         width: None,
