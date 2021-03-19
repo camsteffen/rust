@@ -1082,9 +1082,7 @@ pub fn write(output: &mut dyn Write, args: Arguments<'_>) -> Result {
         fill: ' ',
     };
 
-    let mut idx = 0;
-
-    match args.fmt {
+    let last_idx = match args.fmt {
         None => {
             // We can use default formatting parameters for all arguments.
             for (i, arg) in args.args.iter().enumerate() {
@@ -1093,8 +1091,8 @@ pub fn write(output: &mut dyn Write, args: Arguments<'_>) -> Result {
                 let piece = unsafe { args.pieces.get_unchecked(i) };
                 formatter.buf.write_str(*piece)?;
                 (arg.formatter)(arg.value, &mut formatter)?;
-                idx += 1;
             }
+            args.args.len()
         }
         Some(fmt) => {
             // Every spec has a corresponding argument that is preceded by
@@ -1107,13 +1105,13 @@ pub fn write(output: &mut dyn Write, args: Arguments<'_>) -> Result {
                 // SAFETY: arg and args.args come from the same Arguments,
                 // which guarantees the indexes are always within bounds.
                 unsafe { run(&mut formatter, arg, &args.args) }?;
-                idx += 1;
             }
+            fmt.len()
         }
-    }
+    };
 
     // There can be only one trailing string piece left.
-    if let Some(piece) = args.pieces.get(idx) {
+    if let Some(piece) = args.pieces.get(last_idx) {
         formatter.buf.write_str(*piece)?;
     }
 
