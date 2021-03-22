@@ -389,6 +389,8 @@ impl<'a> Arguments<'a> {
     }
 }
 
+use rt::v2::*;
+
 /// This structure represents a safely precompiled version of a format string
 /// and its arguments. This cannot be generated at runtime because it cannot
 /// safely be done, so no constructors are given and the fields are private
@@ -416,12 +418,14 @@ impl<'a> Arguments<'a> {
 pub struct Arguments<'a> {
     args: ArgumentsInner<'a>,
     last: Option<&'static str>,
+    #[cfg(bootstrap)]
     old: Option<OldArguments<'a>>,
 }
 
 #[doc(hidden)]
 #[unstable(feature = "fmt_internals", reason = "internal to format_args!", issue = "none")]
 #[derive(Copy, Clone)]
+#[allow(missing_debug_implementations)]
 pub struct OldArguments<'a> {
     // Format string pieces to print.
     pieces: &'a [&'static str],
@@ -434,29 +438,7 @@ pub struct OldArguments<'a> {
     args: &'a [ArgumentV1<'a>],
 }
 
-#[doc(hidden)]
-#[unstable(feature = "fmt_internals", reason = "internal to format_args!", issue = "none")]
-#[derive(Clone, Copy)]
-pub enum ArgumentsInner<'a> {
-    Simple(&'a [Arg<'a>]),
-    Formatted(&'a [FormatArg<'a>]),
-}
-
-#[doc(hidden)]
-#[unstable(feature = "fmt_internals", reason = "internal to format_args!", issue = "none")]
-pub struct Arg<'a> {
-    before: &'static str,
-    arg: ArgumentV1<'a>,
-}
-
-#[doc(hidden)]
-#[unstable(feature = "fmt_internals", reason = "internal to format_args!", issue = "none")]
-pub struct FormatArg<'a> {
-    before: &'static str,
-    format: rt::v2::FormatSpec,
-    arg: &'a ArgumentV1<'a>,
-}
-
+/*
 fn new_fmt_args_test(w: &mut dyn Write) {
     let x = 1;
     // new
@@ -481,9 +463,54 @@ fn new_fmt_args_test(w: &mut dyn Write) {
     write(
         w,
         Arguments::new_v2_formatted(
+            &match match (&x, &0) {
+                (arg0, arg1) => [ArgumentV1::new(arg0, Display::fmt), ArgumentV1::new(arg1, Display::fmt)]
+            } {
+                [ref arg0, ref arg1] => [
+                    FormatArg {
+                        before: "x is ",
+                        format: rt::v2::FormatSpec {
+                            fill: ' ',
+                            align: rt::v2::Alignment::Unknown,
+                            flags: 0u32,
+                            precision: None,
+                            width: None,
+                        },
+                        arg: arg0,
+                    },
+                    FormatArg {
+                        before: " again ",
+                        format: rt::v2::FormatSpec {
+                            fill: ' ',
+                            align: rt::v2::Alignment::Unknown,
+                            flags: 0u32,
+                            precision: None,
+                            width: None,
+                        },
+                        arg: arg0,
+                    },
+                    FormatArg {
+                        before: " zerof ",
+                        format: rt::v2::FormatSpec {
+                            fill: ' ',
+                            align: rt::v2::Alignment::Unknown,
+                            flags: 8u32,
+                            precision: None,
+                            width: Some(4usize),
+                        },
+                        arg: arg1,
+                    },
+                ]
+            },
+            Some("\n"),
+        ),
+    );
+    write(
+        w,
+        Arguments::new_v2_formatted(
             {
-                let (arg0, arg1) = (&x, &0);
-                &match (ArgumentV1::new(arg0, Display::fmt), ArgumentV1::new(arg1, Display::fmt)) {
+                let (v0, v1) = (&x, &0);
+                &match (ArgumentV1::new(v0, Display::fmt), ArgumentV1::new(v1, Display::fmt)) {
                     (ref arg0, ref arg1) => [
                         FormatArg {
                             before: "x is ",
@@ -518,13 +545,14 @@ fn new_fmt_args_test(w: &mut dyn Write) {
                             },
                             arg: arg1,
                         },
-                    ],
+                    ]
                 }
             },
             Some("\n"),
         ),
     );
 }
+*/
 
 impl<'a> Arguments<'a> {
     /// Get the formatted string, if it has no arguments to be formatted.
@@ -1210,6 +1238,7 @@ pub trait UpperExp {
 /// [`write!`]: crate::write!
 #[stable(feature = "rust1", since = "1.0.0")]
 pub fn write(output: &mut dyn Write, args: Arguments<'_>) -> Result {
+    #[cfg(bootstrap)]
     if let Some(old) = args.old {
         return old_write(output, old)
     }
@@ -1254,6 +1283,7 @@ pub fn write(output: &mut dyn Write, args: Arguments<'_>) -> Result {
     Ok(())
 }
 
+#[cfg(bootstrap)]
 fn old_write(output: &mut dyn Write, args: OldArguments<'_>) -> Result {
     let mut formatter = Formatter {
         flags: 0,
@@ -1302,6 +1332,7 @@ fn old_write(output: &mut dyn Write, args: OldArguments<'_>) -> Result {
     Ok(())
 }
 
+#[cfg(bootstrap)]
 unsafe fn run(fmt: &mut Formatter<'_>, arg: &rt::v1::Argument, args: &[ArgumentV1<'_>]) -> Result {
     fmt.fill = arg.format.fill;
     fmt.align = arg.format.align;
@@ -1323,6 +1354,7 @@ unsafe fn run(fmt: &mut Formatter<'_>, arg: &rt::v1::Argument, args: &[ArgumentV
     (value.formatter)(value.value, fmt)
 }
 
+#[cfg(bootstrap)]
 unsafe fn getcount(args: &[ArgumentV1<'_>], cnt: &rt::v1::Count) -> Option<usize> {
     match *cnt {
         rt::v1::Count::Is(n) => Some(n),

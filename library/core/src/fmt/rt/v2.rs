@@ -6,6 +6,24 @@
 #![allow(missing_debug_implementations)]
 
 pub use super::v1::Alignment;
+use crate::fmt::ArgumentV1;
+
+#[derive(Clone, Copy)]
+pub enum ArgumentsInner<'a> {
+    Simple(&'a [Arg<'a>]),
+    Formatted(&'a [FormatArg<'a>]),
+}
+
+pub struct Arg<'a> {
+    pub before: &'static str,
+    pub arg: ArgumentV1<'a>,
+}
+
+pub struct FormatArg<'a> {
+    pub before: &'static str,
+    pub format: FormatSpec,
+    pub arg: &'a ArgumentV1<'a>,
+}
 
 #[derive(Copy, Clone)]
 pub struct Argument {
