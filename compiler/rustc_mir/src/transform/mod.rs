@@ -76,9 +76,10 @@ pub(crate) fn provide(providers: &mut Providers) {
         },
         mir_promoted,
         mir_drops_elaborated_and_const_checked,
-        mir_for_ctfe,
+        mir_for_ctfe: |tcx, def_id| unoptimized_mir(tcx, def_id, true),
         mir_for_ctfe_of_const_arg,
         optimized_mir,
+        unoptimized_mir: |tcx, def_id| unoptimized_mir(tcx, def_id, false),
         is_mir_available,
         is_ctfe_mir_available: |tcx, did| is_mir_available(tcx, did),
         promoted_mir: |tcx, def_id| {
@@ -324,13 +325,13 @@ fn mir_promoted(
     (tcx.alloc_steal_mir(body), tcx.alloc_steal_promoted(promoted))
 }
 
-/// Compute the MIR that is used during CTFE (and thus has no optimizations run on it)
-fn mir_for_ctfe<'tcx>(tcx: TyCtxt<'tcx>, def_id: DefId) -> &'tcx Body<'tcx> {
+/// Compute the MIR with no optimizations. If `for_ctfe` is `true`, the item must have a `const` body.
+fn unoptimized_mir<'tcx>(tcx: TyCtxt<'tcx>, def_id: DefId, for_ctfe: bool) -> &'tcx Body<'tcx> {
     let did = def_id.expect_local();
     if let Some(def) = ty::WithOptConstParam::try_lookup(did, tcx) {
         tcx.mir_for_ctfe_of_const_arg(def)
     } else {
-        tcx.arena.alloc(inner_mir_for_ctfe(tcx, ty::WithOptConstParam::unknown(did)))
+        tcx.arena.alloc(inner_unoptimized_mir(tcx, ty::WithOptConstParam::unknown(did), for_ctfe))
     }
 }
 
@@ -343,13 +344,18 @@ fn mir_for_ctfe_of_const_arg<'tcx>(
     tcx: TyCtxt<'tcx>,
     (did, param_did): (LocalDefId, DefId),
 ) -> &'tcx Body<'tcx> {
-    tcx.arena.alloc(inner_mir_for_ctfe(
+    tcx.arena.alloc(inner_unoptimized_mir(
         tcx,
         ty::WithOptConstParam { did, const_param_did: Some(param_did) },
+        true,
     ))
 }
 
-fn inner_mir_for_ctfe(tcx: TyCtxt<'_>, def: ty::WithOptConstParam<LocalDefId>) -> Body<'_> {
+fn inner_unoptimized_mir(
+    tcx: TyCtxt<'_>,
+    def: ty::WithOptConstParam<LocalDefId>,
+    for_ctfe: bool,
+) -> Body<'_> {
     // FIXME: don't duplicate this between the optimized_mir/mir_for_ctfe queries
     if tcx.is_constructor(def.did.to_def_id()) {
         // There's no reason to run all of the MIR passes on constructors when
@@ -359,41 +365,43 @@ fn inner_mir_for_ctfe(tcx: TyCtxt<'_>, def: ty::WithOptConstParam<LocalDefId>) -
         return shim::build_adt_ctor(tcx, def.did.to_def_id());
     }
 
-    let context = tcx
-        .hir()
-        .body_const_context(def.did)
-        .expect("mir_for_ctfe should not be used for runtime functions");
+    let context = tcx.hir().body_const_context(def.did);
+    if for_ctfe && context.is_none() {
+        panic!("mir_for_ctfe should not be used for runtime functions");
+    }
 
     let mut body = tcx.mir_drops_elaborated_and_const_checked(def).borrow().clone();
 
-    match context {
-        // Do not const prop functions, either they get executed at runtime or exported to metadata,
-        // so we run const prop on them, or they don't, in which case we const evaluate some control
-        // flow paths of the function and any errors in those paths will get emitted as const eval
-        // errors.
-        hir::ConstContext::ConstFn => {}
-        // Static items always get evaluated, so we can just let const eval see if any erroneous
-        // control flow paths get executed.
-        hir::ConstContext::Static(_) => {}
-        // Associated constants get const prop run so we detect common failure situations in the
-        // crate that defined the constant.
-        // Technically we want to not run on regular const items, but oli-obk doesn't know how to
-        // conveniently detect that at this point without looking at the HIR.
-        hir::ConstContext::Const => {
-            #[rustfmt::skip]
-            let optimizations: &[&dyn MirPass<'_>] = &[
-                &const_prop::ConstProp,
-            ];
+    if let Some(context) = context {
+        match context {
+            // Do not const prop functions, either they get executed at runtime or exported to metadata,
+            // so we run const prop on them, or they don't, in which case we const evaluate some control
+            // flow paths of the function and any errors in those paths will get emitted as const eval
+            // errors.
+            hir::ConstContext::ConstFn => {}
+            // Static items always get evaluated, so we can just let const eval see if any erroneous
+            // control flow paths get executed.
+            hir::ConstContext::Static(_) => {}
+            // Associated constants get const prop run so we detect common failure situations in the
+            // crate that defined the constant.
+            // Technically we want to not run on regular const items, but oli-obk doesn't know how to
+            // conveniently detect that at this point without looking at the HIR.
+            hir::ConstContext::Const => {
+                #[rustfmt::skip]
+                    let optimizations: &[&dyn MirPass<'_>] = &[
+                    &const_prop::ConstProp,
+                ];
 
-            #[rustfmt::skip]
-            run_passes(
-                tcx,
-                &mut body,
-                MirPhase::Optimization,
-                &[
-                    optimizations,
-                ],
-            );
+                #[rustfmt::skip]
+                    run_passes(
+                    tcx,
+                    &mut body,
+                    MirPhase::Optimization,
+                    &[
+                        optimizations,
+                    ],
+                );
+            }
         }
     }
 

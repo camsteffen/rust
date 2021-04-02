@@ -293,8 +293,8 @@ rustc_queries! {
     query mir_for_ctfe(
         key: DefId
     ) -> &'tcx mir::Body<'tcx> {
+        eval_always
         desc { |tcx| "caching mir of `{}` for CTFE", tcx.def_path_str(key) }
-        cache_on_disk_if { key.is_local() }
     }
 
     query mir_for_ctfe_of_const_arg(key: (LocalDefId, DefId)) -> &'tcx mir::Body<'tcx> {
@@ -321,6 +321,11 @@ rustc_queries! {
     /// for codegen. This is also the only query that can fetch non-local MIR, at present.
     query optimized_mir(key: DefId) -> &'tcx mir::Body<'tcx> {
         desc { |tcx| "optimizing MIR for `{}`", tcx.def_path_str(key) }
+        cache_on_disk_if { key.is_local() }
+    }
+
+    query unoptimized_mir(key: DefId) -> &'tcx mir::Body<'tcx> {
+        desc { |tcx| "caching unoptimized MIR for `{}`", tcx.def_path_str(key) }
         cache_on_disk_if { key.is_local() }
     }
 

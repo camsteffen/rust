@@ -1259,7 +1259,7 @@ impl EncodeContext<'a, 'tcx> {
                 record!(self.tables.mir[def_id.to_def_id()] <- self.tcx.optimized_mir(def_id));
             }
             if encode_const {
-                record!(self.tables.mir_for_ctfe[def_id.to_def_id()] <- self.tcx.mir_for_ctfe(def_id));
+                record!(self.tables.unoptimized_mir[def_id.to_def_id()] <- self.tcx.unoptimized_mir(def_id));
 
                 let abstract_const = self.tcx.mir_abstract_const(def_id);
                 if let Ok(Some(abstract_const)) = abstract_const {
