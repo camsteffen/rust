@@ -421,9 +421,9 @@ impl Visitor<'tcx> for ExprVisitor<'tcx> {
                 if let Res::Def(DefKind::Fn, did) = res {
                     if self.def_id_is_transmute(did) {
                         let typ = self.typeck_results.node_type(expr.hir_id);
-                        let sig = typ.fn_sig(self.tcx);
-                        let from = sig.inputs().skip_binder()[0];
-                        let to = sig.output().skip_binder();
+                        let sig = typ.fn_sig(self.tcx).skip_binder();
+                        let from = sig.inputs()[0];
+                        let to = sig.output();
                         self.check_transmute(expr.span, from, to);
                     }
                 }

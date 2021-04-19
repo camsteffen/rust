@@ -174,7 +174,7 @@ fn check_closure(cx: &LateContext<'_>, expr: &Expr<'_>) {
 
 /// Tries to determine the type for universal function call to be used instead of the closure
 fn get_ufcs_type_name(cx: &LateContext<'_>, method_def_id: def_id::DefId, self_arg: &Expr<'_>) -> Option<String> {
-    let expected_type_of_self = &cx.tcx.fn_sig(method_def_id).inputs_and_output().skip_binder()[0];
+    let expected_type_of_self = &cx.tcx.fn_sig(method_def_id).skip_binder().inputs_and_output[0];
     let actual_type_of_self = &cx.typeck_results().node_type(self_arg.hir_id);
 
     if let Some(trait_id) = cx.tcx.trait_of_item(method_def_id) {

@@ -192,7 +192,7 @@ fn check_trait_items(cx: &LateContext<'_>, visited_trait: &Item<'_>, trait_items
     fn is_named_self(cx: &LateContext<'_>, item: &TraitItemRef, name: &str) -> bool {
         item.ident.name.as_str() == name
             && if let AssocItemKind::Fn { has_self } = item.kind {
-                has_self && { cx.tcx.fn_sig(item.id.def_id).inputs().skip_binder().len() == 1 }
+                has_self && { cx.tcx.fn_sig(item.id.def_id).skip_binder().inputs().len() == 1 }
             } else {
                 false
             }
@@ -218,7 +218,7 @@ fn check_trait_items(cx: &LateContext<'_>, visited_trait: &Item<'_>, trait_items
                 i.kind == ty::AssocKind::Fn
                     && i.fn_has_self_parameter
                     && i.ident.name == sym!(is_empty)
-                    && cx.tcx.fn_sig(i.def_id).inputs().skip_binder().len() == 1
+                    && cx.tcx.fn_sig(i.def_id).skip_binder().inputs().len() == 1
             });
 
         if !is_empty_method_found {

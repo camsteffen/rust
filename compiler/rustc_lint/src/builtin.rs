@@ -1213,9 +1213,9 @@ impl<'tcx> LateLintPass<'tcx> for MutableTransmutes {
                 if !def_id_is_transmute(cx, did) {
                     return None;
                 }
-                let sig = cx.typeck_results().node_type(expr.hir_id).fn_sig(cx.tcx);
-                let from = sig.inputs().skip_binder()[0];
-                let to = sig.output().skip_binder();
+                let sig = cx.typeck_results().node_type(expr.hir_id).fn_sig(cx.tcx).skip_binder();
+                let from = sig.inputs()[0];
+                let to = sig.output();
                 return Some((from, to));
             }
             None

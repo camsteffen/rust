@@ -240,8 +240,8 @@ fn closure_return_type_suggestion(
 /// Given a closure signature, return a `String` containing a list of all its argument types.
 fn closure_args(fn_sig: &ty::PolyFnSig<'_>) -> String {
     fn_sig
-        .inputs()
         .skip_binder()
+        .inputs()
         .iter()
         .next()
         .map(|args| args.tuple_fields().map(|arg| arg.to_string()).collect::<Vec<_>>().join(", "))
@@ -504,7 +504,7 @@ impl<'a, 'tcx> InferCtxt<'a, 'tcx> {
                     if let ty::Closure(_, substs) = *ty.kind() { substs } else { unreachable!() };
                 let fn_sig = substs.as_closure().sig();
                 let args = closure_args(&fn_sig);
-                let ret = fn_sig.output().skip_binder().to_string();
+                let ret = fn_sig.skip_binder().output().to_string();
                 format!(" for the closure `fn({}) -> {}`", args, ret)
             }
             (Some(ty), _) if is_named_and_not_impl_trait(ty) => {
@@ -546,7 +546,7 @@ impl<'a, 'tcx> InferCtxt<'a, 'tcx> {
                 let substs =
                     if let ty::Closure(_, substs) = *ty.kind() { substs } else { unreachable!() };
                 let fn_sig = substs.as_closure().sig();
-                let ret = fn_sig.output().skip_binder().to_string();
+                let ret = fn_sig.skip_binder().output().to_string();
 
                 let closure_decl_and_body_id =
                     local_visitor.found_closure.and_then(|closure| match &closure.kind {
@@ -836,9 +836,8 @@ impl<'a, 'tcx> InferCtxt<'a, 'tcx> {
                         Applicability::HasPlaceholders,
                     );
                 } else {
-                    let sig = self.tcx.fn_sig(did);
-                    let bound_output = sig.output();
-                    let output = bound_output.skip_binder();
+                    let sig = self.tcx.fn_sig(did).skip_binder();
+                    let output = sig.output();
                     err.span_label(e.span, &format!("this method call resolves to `{}`", output));
                     let kind = output.kind();
                     if let ty::Projection(proj) = kind {

@@ -91,7 +91,7 @@ impl<'a, 'tcx> NiceRegionError<'a, 'tcx> {
     ) -> Option<&rustc_hir::Ty<'_>> {
         if let Some(hir::IsAsync::Async) = self.asyncness(local_def_id) {
             if let rustc_middle::ty::Opaque(def_id, _) =
-                self.tcx().type_of(local_def_id).fn_sig(self.tcx()).output().skip_binder().kind()
+                self.tcx().type_of(local_def_id).fn_sig(self.tcx()).skip_binder().output().kind()
             {
                 match self.tcx().hir().get_if_local(*def_id) {
                     Some(hir::Node::Item(hir::Item {

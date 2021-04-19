@@ -163,8 +163,8 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                                 ty::AssocKind::Fn => self
                                     .tcx
                                     .fn_sig(item.def_id)
-                                    .inputs()
                                     .skip_binder()
+                                    .inputs()
                                     .get(0)
                                     .filter(|ty| ty.is_region_ptr() && !rcvr_ty.is_region_ptr())
                                     .copied()

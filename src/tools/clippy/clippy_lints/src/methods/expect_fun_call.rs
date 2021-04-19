@@ -67,7 +67,7 @@ pub(super) fn check(cx: &LateContext<'_>, expr: &hir::Expr<'_>, method_span: Spa
                 if let hir::ExprKind::Path(ref p) = fun.kind {
                     match cx.qpath_res(p, fun.hir_id) {
                         hir::def::Res::Def(hir::def::DefKind::Fn | hir::def::DefKind::AssocFn, def_id) => matches!(
-                            cx.tcx.fn_sig(def_id).output().skip_binder().kind(),
+                            cx.tcx.fn_sig(def_id).skip_binder().output().kind(),
                             ty::Ref(ty::ReStatic, ..)
                         ),
                         _ => false,
@@ -81,7 +81,7 @@ pub(super) fn check(cx: &LateContext<'_>, expr: &hir::Expr<'_>, method_span: Spa
                     .type_dependent_def_id(arg.hir_id)
                     .map_or(false, |method_id| {
                         matches!(
-                            cx.tcx.fn_sig(method_id).output().skip_binder().kind(),
+                            cx.tcx.fn_sig(method_id).skip_binder().output().kind(),
                             ty::Ref(ty::ReStatic, ..)
                         )
                     })

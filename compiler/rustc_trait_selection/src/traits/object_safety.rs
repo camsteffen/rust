@@ -407,7 +407,7 @@ fn virtual_call_violation_for_method<'tcx>(
         return Some(MethodViolationCode::StaticMethod(
             sugg,
             self_span,
-            !sig.inputs().skip_binder().is_empty(),
+            !sig.skip_binder().inputs().is_empty(),
         ));
     }
 

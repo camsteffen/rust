@@ -505,7 +505,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             for ((hir_ty, &supplied_ty), expected_ty) in iter::zip(
                 iter::zip(
                     decl.inputs,
-                    supplied_sig.inputs().skip_binder(), // binder moved to (*) below
+                    supplied_sig.skip_binder().inputs(), // binder moved to (*) below
                 ),
                 expected_sigs.liberated_sig.inputs(), // `liberated_sig` is E'.
             ) {

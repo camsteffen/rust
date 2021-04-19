@@ -695,10 +695,10 @@ fn compare_number_of_method_arguments<'tcx>(
     trait_m: &ty::AssocItem,
     trait_item_span: Option<Span>,
 ) -> Result<(), ErrorReported> {
-    let impl_m_fty = tcx.fn_sig(impl_m.def_id);
-    let trait_m_fty = tcx.fn_sig(trait_m.def_id);
-    let trait_number_args = trait_m_fty.inputs().skip_binder().len();
-    let impl_number_args = impl_m_fty.inputs().skip_binder().len();
+    let impl_m_fty = tcx.fn_sig(impl_m.def_id).skip_binder();
+    let trait_m_fty = tcx.fn_sig(trait_m.def_id).skip_binder();
+    let trait_number_args = trait_m_fty.inputs().len();
+    let impl_number_args = impl_m_fty.inputs().len();
     if trait_number_args != impl_number_args {
         let trait_span = if let Some(def_id) = trait_m.def_id.as_local() {
             let trait_id = tcx.hir().local_def_id_to_hir_id(def_id);

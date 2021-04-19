@@ -491,7 +491,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 // ```
                 //
                 // to work in stable even if the Sized bound on `drop` is relaxed.
-                for i in 0..fn_sig.inputs().skip_binder().len() {
+                for i in 0..fn_sig.skip_binder().inputs().len() {
                     // We just want to check sizedness, so instead of introducing
                     // placeholder lifetimes with probing, we just replace higher lifetimes
                     // with fresh vars.

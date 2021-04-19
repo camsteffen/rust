@@ -595,9 +595,9 @@ impl<'cx, 'tcx> UniversalRegionsBuilder<'cx, 'tcx> {
             DefiningTy::Closure(def_id, substs) => {
                 assert_eq!(self.mir_def.did.to_def_id(), def_id);
                 let closure_sig = substs.as_closure().sig();
-                let inputs_and_output = closure_sig.inputs_and_output();
                 let bound_vars = tcx.mk_bound_variable_kinds(
-                    inputs_and_output
+                    closure_sig
+                        .inputs_and_output()
                         .bound_vars()
                         .iter()
                         .chain(iter::once(ty::BoundVariableKind::Region(ty::BrEnv))),
@@ -613,7 +613,7 @@ impl<'cx, 'tcx> UniversalRegionsBuilder<'cx, 'tcx> {
                 // signature appear as a tuple.  The MIR side
                 // flattens this tuple.
                 let (&output, tuplized_inputs) =
-                    inputs_and_output.skip_binder().split_last().unwrap();
+                    closure_sig.skip_binder().inputs_and_output.split_last().unwrap();
                 assert_eq!(tuplized_inputs.len(), 1, "multiple closure inputs");
                 let inputs = match tuplized_inputs[0].kind() {
                     ty::Tuple(inputs) => inputs,

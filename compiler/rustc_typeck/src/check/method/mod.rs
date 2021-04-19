@@ -152,8 +152,8 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 ProbeScope::TraitsInScope,
             )
             .map(|pick| {
-                let sig = self.tcx.fn_sig(pick.item.def_id);
-                sig.inputs().skip_binder().len().saturating_sub(1)
+                let sig = self.tcx.fn_sig(pick.item.def_id).skip_binder();
+                sig.inputs().len().saturating_sub(1)
             })
             .unwrap_or(0);
 

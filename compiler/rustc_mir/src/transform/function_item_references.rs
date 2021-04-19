@@ -183,9 +183,9 @@ impl<'a, 'tcx> FunctionItemRefChecker<'a, 'tcx> {
             .as_ref()
             .assert_crate_local()
             .lint_root;
-        let fn_sig = self.tcx.fn_sig(fn_id);
-        let unsafety = fn_sig.unsafety().prefix_str();
-        let abi = match fn_sig.abi() {
+        let fn_sig = self.tcx.fn_sig(fn_id).skip_binder();
+        let unsafety = fn_sig.unsafety.prefix_str();
+        let abi = match fn_sig.abi {
             Abi::Rust => String::from(""),
             other_abi => {
                 let mut s = String::from("extern \"");
@@ -198,9 +198,9 @@ impl<'a, 'tcx> FunctionItemRefChecker<'a, 'tcx> {
         let ty_params = fn_substs.types().map(|ty| format!("{}", ty));
         let const_params = fn_substs.consts().map(|c| format!("{}", c));
         let params = ty_params.chain(const_params).collect::<Vec<String>>().join(", ");
-        let num_args = fn_sig.inputs().map_bound(|inputs| inputs.len()).skip_binder();
-        let variadic = if fn_sig.c_variadic() { ", ..." } else { "" };
-        let ret = if fn_sig.output().skip_binder().is_unit() { "" } else { " -> _" };
+        let num_args = fn_sig.inputs().len();
+        let variadic = if fn_sig.c_variadic { ", ..." } else { "" };
+        let ret = if fn_sig.output().is_unit() { "" } else { " -> _" };
         self.tcx.struct_span_lint_hir(FUNCTION_ITEM_REFERENCES, lint_root, span, |lint| {
             lint.build("taking a reference to a function item does not give a function pointer")
                 .span_suggestion(

@@ -259,8 +259,8 @@ impl Validator<'mir, 'tcx> {
             // impl trait is gone in MIR, so check the return type of a const fn by its signature
             // instead of the type of the return place.
             self.span = body.local_decls[RETURN_PLACE].source_info.span;
-            let return_ty = tcx.fn_sig(def_id).output();
-            self.check_local_or_return_ty(return_ty.skip_binder(), RETURN_PLACE);
+            let return_ty = tcx.fn_sig(def_id).skip_binder().output();
+            self.check_local_or_return_ty(return_ty, RETURN_PLACE);
         }
 
         self.visit_body(&body);

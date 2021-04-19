@@ -539,7 +539,7 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
             _ => None,
         };
 
-        let extra_args = &args[sig.inputs().skip_binder().len()..];
+        let extra_args = &args[sig.skip_binder().inputs().len()..];
         let extra_args = extra_args
             .iter()
             .map(|op_arg| {

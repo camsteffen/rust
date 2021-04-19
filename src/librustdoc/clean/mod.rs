@@ -1149,7 +1149,7 @@ impl Clean<Item> for ty::AssocItem {
                         ty::ImplContainer(def_id) => tcx.type_of(def_id),
                         ty::TraitContainer(_) => tcx.types.self_param,
                     };
-                    let self_arg_ty = sig.input(0).skip_binder();
+                    let self_arg_ty = sig.skip_binder().inputs()[0];
                     if self_arg_ty == self_ty {
                         decl.inputs.values[0].type_ = Generic(kw::SelfUpper);
                     } else if let ty::Ref(_, ty, _) = *self_arg_ty.kind() {
