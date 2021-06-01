@@ -401,16 +401,14 @@ crate fn run_global_ctxt(
     if krate.module.doc_value().map(|d| d.is_empty()).unwrap_or(true) {
         let help = "The following guide may be of use:\n\
                 https://doc.rust-lang.org/nightly/rustdoc/how-to-write-documentation.html";
-        tcx.struct_lint_node(
+        if let Some(lint) = tcx.struct_lint_node(
             crate::lint::MISSING_CRATE_LEVEL_DOCS,
             DocContext::as_local_hir_id(tcx, krate.module.def_id).unwrap(),
-            |lint| {
-                let mut diag =
-                    lint.build("no documentation found for this crate's top-level module");
-                diag.help(help);
-                diag.emit();
-            },
-        );
+        ) {
+            let mut diag = lint.build("no documentation found for this crate's top-level module");
+            diag.help(help);
+            diag.emit();
+        }
     }
 
     fn report_deprecated_attr(name: &str, diag: &rustc_errors::Handler, sp: Span) {

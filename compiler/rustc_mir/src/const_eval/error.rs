@@ -202,12 +202,13 @@ impl<'tcx> ConstEvalErr<'tcx> {
                     .rev()
                     .find_map(|frame| frame.lint_root)
                     .unwrap_or(lint_root);
-                tcx.struct_span_lint_hir(
+                if let Some(lint) = tcx.struct_span_lint_hir(
                     rustc_session::lint::builtin::CONST_ERR,
                     hir_id,
                     tcx.span,
-                    |lint| finish(lint.build(message), Some(err_msg)),
-                );
+                ) {
+                    finish(lint.build(message), Some(err_msg));
+                }
                 ErrorHandled::Linted
             } else {
                 // Report as hard error.

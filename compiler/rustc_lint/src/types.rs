@@ -139,7 +139,7 @@ fn lint_overflowing_range_endpoint<'tcx>(
         // (`..=`) instead only if it is the `end` that is
         // overflowing and only by 1.
         if eps[1].expr.hir_id == expr.hir_id && lit_val - 1 == max {
-            cx.struct_span_lint(OVERFLOWING_LITERALS, parent_expr.span, |lint| {
+            if let Some(lint) = cx.lookup_span_lint(OVERFLOWING_LITERALS, parent_expr.span) {
                 let mut err = lint.build(&format!("range endpoint is out of range for `{}`", ty));
                 if let Ok(start) = cx.sess().source_map().span_to_snippet(eps[0].span) {
                     use ast::{LitIntType, LitKind};
@@ -161,7 +161,7 @@ fn lint_overflowing_range_endpoint<'tcx>(
                     err.emit();
                     overwritten = true;
                 }
-            });
+            }
         }
     }
     overwritten
@@ -215,7 +215,7 @@ fn report_bin_hex_error(
     negative: bool,
 ) {
     let size = Integer::from_attr(&cx.tcx, ty).size();
-    cx.struct_span_lint(OVERFLOWING_LITERALS, expr.span, |lint| {
+    if let Some(lint) = cx.lookup_span_lint(OVERFLOWING_LITERALS, expr.span) {
         let (t, actually) = match ty {
             attr::IntType::SignedInt(t) => {
                 let actually = if negative {
@@ -263,7 +263,7 @@ fn report_bin_hex_error(
             }
         }
         err.emit();
-    });
+    }
 }
 
 // This function finds the next fitting type and generates a suggestion string.
@@ -353,7 +353,7 @@ fn lint_int_literal<'tcx>(
             }
         }
 
-        cx.struct_span_lint(OVERFLOWING_LITERALS, e.span, |lint| {
+        if let Some(lint) = cx.lookup_span_lint(OVERFLOWING_LITERALS, e.span) {
             let mut err = lint.build(&format!("literal out of range for `{}`", t.name_str()));
             err.note(&format!(
                 "the literal `{}` does not fit into the type `{}` whose range is `{}..={}`",
@@ -371,7 +371,7 @@ fn lint_int_literal<'tcx>(
                 err.help(&format!("consider using the type `{}` instead", sugg_ty));
             }
             err.emit();
-        });
+        }
     }
 }
 
@@ -395,7 +395,7 @@ fn lint_uint_literal<'tcx>(
             match par_e.kind {
                 hir::ExprKind::Cast(..) => {
                     if let ty::Char = cx.typeck_results().expr_ty(par_e).kind() {
-                        cx.struct_span_lint(OVERFLOWING_LITERALS, par_e.span, |lint| {
+                        if let Some(lint) = cx.lookup_span_lint(OVERFLOWING_LITERALS, par_e.span) {
                             lint.build("only `u8` can be cast into `char`")
                                 .span_suggestion(
                                     par_e.span,
@@ -404,7 +404,7 @@ fn lint_uint_literal<'tcx>(
                                     Applicability::MachineApplicable,
                                 )
                                 .emit();
-                        });
+                        }
                         return;
                     }
                 }
@@ -429,7 +429,7 @@ fn lint_uint_literal<'tcx>(
             );
             return;
         }
-        cx.struct_span_lint(OVERFLOWING_LITERALS, e.span, |lint| {
+        if let Some(lint) = cx.lookup_span_lint(OVERFLOWING_LITERALS, e.span) {
             lint.build(&format!("literal out of range for `{}`", t.name_str()))
                 .note(&format!(
                     "the literal `{}` does not fit into the type `{}` whose range is `{}..={}`",
@@ -442,7 +442,7 @@ fn lint_uint_literal<'tcx>(
                     max,
                 ))
                 .emit()
-        });
+        }
     }
 }
 
@@ -471,7 +471,7 @@ fn lint_literal<'tcx>(
                 _ => bug!(),
             };
             if is_infinite == Ok(true) {
-                cx.struct_span_lint(OVERFLOWING_LITERALS, e.span, |lint| {
+                if let Some(lint) = cx.lookup_span_lint(OVERFLOWING_LITERALS, e.span) {
                     lint.build(&format!("literal out of range for `{}`", t.name_str()))
                         .note(&format!(
                             "the literal `{}` does not fit into the type `{}` and will be converted to `{}::INFINITY`",
@@ -483,7 +483,7 @@ fn lint_literal<'tcx>(
                             t.name_str(),
                         ))
                         .emit();
-                });
+                }
             }
         }
         _ => {}
@@ -501,9 +501,11 @@ impl<'tcx> LateLintPass<'tcx> for TypeLimits {
             }
             hir::ExprKind::Binary(binop, ref l, ref r) => {
                 if is_comparison(binop) && !check_limits(cx, binop, &l, &r) {
-                    cx.struct_span_lint(UNUSED_COMPARISONS, e.span, |lint| {
-                        lint.build("comparison is useless due to type limits").emit()
-                    });
+                    cx.emit_span_lint(
+                        UNUSED_COMPARISONS,
+                        e.span,
+                        "comparison is useless due to type limits",
+                    );
                 }
             }
             hir::ExprKind::Lit(ref lit) => lint_literal(cx, self, e, lit),
@@ -1145,7 +1147,7 @@ impl<'a, 'tcx> ImproperCTypesVisitor<'a, 'tcx> {
             CItemKind::Definition => IMPROPER_CTYPES_DEFINITIONS,
         };
 
-        self.cx.struct_span_lint(lint, sp, |lint| {
+        if let Some(lint) = self.cx.lookup_span_lint(lint, sp) {
             let item_description = match self.mode {
                 CItemKind::Declaration => "block",
                 CItemKind::Definition => "fn",
@@ -1165,7 +1167,7 @@ impl<'a, 'tcx> ImproperCTypesVisitor<'a, 'tcx> {
                 }
             }
             diag.emit();
-        });
+        }
     }
 
     fn check_for_opaque_ty(&mut self, sp: Span, ty: Ty<'tcx>) -> bool {
@@ -1378,18 +1380,17 @@ impl<'tcx> LateLintPass<'tcx> for VariantSizeDifferences {
             // We only warn if the largest variant is at least thrice as large as
             // the second-largest.
             if largest > slargest * 3 && slargest > 0 {
-                cx.struct_span_lint(
+                if let Some(lint) = cx.lookup_span_lint(
                     VARIANT_SIZE_DIFFERENCES,
                     enum_definition.variants[largest_index].span,
-                    |lint| {
-                        lint.build(&format!(
-                            "enum variant is more than three times \
-                                          larger ({} bytes) than the next largest",
-                            largest
-                        ))
-                        .emit()
-                    },
-                );
+                ) {
+                    lint.build(&format!(
+                        "enum variant is more than three times \
+                                      larger ({} bytes) than the next largest",
+                        largest
+                    ))
+                    .emit();
+                }
             }
         }
     }

@@ -24,6 +24,7 @@ use rustc_session::Session;
 use rustc_span::symbol::Ident;
 use rustc_span::Span;
 
+use crate::builtin::builtin_lint_diagnostic;
 use std::slice;
 use tracing::debug;
 
@@ -40,12 +41,11 @@ impl<'a, T: EarlyLintPass> EarlyContextAndPass<'a, T> {
     fn check_id(&mut self, id: ast::NodeId) {
         for early_lint in self.context.buffered.take(id) {
             let BufferedEarlyLint { span, msg, node_id: _, lint_id, diagnostic } = early_lint;
-            self.context.lookup_with_diagnostics(
-                lint_id.lint,
-                Some(span),
-                |lint| lint.build(&msg).emit(),
-                diagnostic,
-            );
+            if let Some(lint) = self.context.lookup_span_lint(lint_id.lint, span) {
+                let mut diag = lint.build(&msg);
+                builtin_lint_diagnostic(self.context.sess, &mut diag, diagnostic);
+                diag.emit();
+            }
         }
     }
 
