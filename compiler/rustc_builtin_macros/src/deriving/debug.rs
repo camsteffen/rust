@@ -135,7 +135,7 @@ fn stmt_let_underscore(cx: &mut ExtCtxt<'_>, sp: Span, expr: P<ast::Expr>) -> as
     let local = P(ast::Local {
         pat: cx.pat_wild(sp),
         ty: None,
-        init: Some(expr),
+        init: Some((expr, None)),
         id: ast::DUMMY_NODE_ID,
         span: sp,
         attrs: ast::AttrVec::new(),

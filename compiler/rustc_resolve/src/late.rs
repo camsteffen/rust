@@ -454,7 +454,8 @@ impl<'a: 'ast, 'ast> Visitor<'ast> for LateResolutionVisitor<'a, '_, 'ast> {
             _ => Some((
                 local.pat.span,
                 local.ty.as_ref().map(|ty| ty.span),
-                local.init.as_ref().map(|init| init.span),
+                local.init.as_ref().map(|(init, _)| init.span),
+                // todo els
             )),
         };
         let original = replace(&mut self.diagnostic_metadata.current_let_binding, local_spans);
@@ -1426,7 +1427,10 @@ impl<'a: 'ast, 'b, 'ast> LateResolutionVisitor<'a, 'b, 'ast> {
         walk_list!(self, visit_ty, &local.ty);
 
         // Resolve the initializer.
-        walk_list!(self, visit_expr, &local.init);
+        if let Some((init, els)) = &local.init {
+            self.visit_expr(init);
+            walk_list!(self, visit_block, els);
+        }
 
         // Resolve the pattern.
         self.resolve_pattern_top(&local.pat, PatternSource::Let);

@@ -575,7 +575,10 @@ pub fn noop_visit_local<T: MutVisitor>(local: &mut P<Local>, vis: &mut T) {
     vis.visit_id(id);
     vis.visit_pat(pat);
     visit_opt(ty, |ty| vis.visit_ty(ty));
-    visit_opt(init, |init| vis.visit_expr(init));
+    visit_opt(init, |(init, els)| {
+        vis.visit_expr(init);
+        visit_opt(els, |els| vis.visit_block(els));
+    });
     vis.visit_span(span);
     visit_thin_attrs(attrs, vis);
     visit_lazy_tts(tokens, vis);

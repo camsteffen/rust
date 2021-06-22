@@ -1741,7 +1741,8 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
                 },
             )
         });
-        let init = l.init.as_ref().map(|e| self.lower_expr(e));
+        // todo lower else
+        let init = l.init.as_ref().map(|(init, _els)| self.lower_expr(init));
         let hir_id = self.lower_node_id(l.id);
         self.lower_attrs(hir_id, &l.attrs);
         hir::Local {

@@ -998,8 +998,8 @@ pub struct Local {
     pub id: NodeId,
     pub pat: P<Pat>,
     pub ty: Option<P<Ty>>,
-    /// Initializer expression to set the value, if any.
-    pub init: Option<P<Expr>>,
+    /// Initializer expression to set the value, if any, and an optional `else` block
+    pub init: Option<(P<Expr>, Option<P<Block>>)>,
     pub span: Span,
     pub attrs: AttrVec,
     pub tokens: Option<LazyTokenStream>,

@@ -153,7 +153,7 @@ impl<'a> ExtCtxt<'a> {
         let local = P(ast::Local {
             pat,
             ty: None,
-            init: Some(ex),
+            init: Some((ex, None)),
             id: ast::DUMMY_NODE_ID,
             span: sp,
             attrs: AttrVec::new(),

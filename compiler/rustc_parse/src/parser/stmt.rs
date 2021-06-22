@@ -292,6 +292,13 @@ impl<'a> Parser<'a> {
                 return Err(err);
             }
         };
+        let init = match init {
+            None => None,
+            Some(init) => {
+                let els = if self.eat_keyword(kw::Else) { Some(self.parse_block()?) } else { None };
+                Some((init, els))
+            }
+        };
         let hi = if self.token == token::Semi { self.token.span } else { self.prev_token.span };
         Ok(P(ast::Local { ty, pat, init, id: DUMMY_NODE_ID, span: lo.to(hi), attrs, tokens: None }))
     }
@@ -497,7 +504,7 @@ impl<'a> Parser<'a> {
                 if let Err(e) = self.expect_semi() {
                     // We might be at the `,` in `let x = foo<bar, baz>;`. Try to recover.
                     match &mut local.init {
-                        Some(ref mut expr) => {
+                        Some((ref mut expr, _)) => {
                             self.check_mistyped_turbofish_with_multiple_type_params(e, expr)?;
                             // We found `foo<bar, baz>`, have we fully recovered?
                             self.expect_semi()?;
