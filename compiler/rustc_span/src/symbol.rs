@@ -684,6 +684,7 @@ symbols! {
         le,
         len,
         let_chains,
+        let_else,
         lhs,
         lib,
         libc,
