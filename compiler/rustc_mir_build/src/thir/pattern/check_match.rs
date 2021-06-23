@@ -424,7 +424,9 @@ fn report_arm_reachability<'p, 'tcx>(
                 match source {
                     hir::MatchSource::WhileDesugar => bug!(),
 
-                    hir::MatchSource::IfLetDesugar { .. } | hir::MatchSource::WhileLetDesugar => {
+                    hir::MatchSource::IfLetDesugar { .. }
+                    | hir::MatchSource::LetElseDesugar
+                    | hir::MatchSource::WhileLetDesugar => {
                         // Check which arm we're on.
                         match arm_index {
                             // The arm with the user-specified pattern.

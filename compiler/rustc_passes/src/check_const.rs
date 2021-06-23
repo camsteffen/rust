@@ -49,7 +49,9 @@ impl NonConstExpr {
 
             // All other expressions are allowed.
             Self::Loop(Loop | While | WhileLet)
-            | Self::Match(WhileDesugar | WhileLetDesugar | Normal | IfLetDesugar { .. }) => &[],
+            | Self::Match(
+                LetElseDesugar | WhileDesugar | WhileLetDesugar | Normal | IfLetDesugar { .. },
+            ) => &[],
         };
 
         Some(gates)

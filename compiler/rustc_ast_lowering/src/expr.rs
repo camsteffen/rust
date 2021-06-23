@@ -1862,7 +1862,11 @@ impl<'hir> LoweringContext<'_, 'hir> {
         hir::ExprField { hir_id: self.next_id(), ident, span, expr, is_shorthand: false }
     }
 
-    fn arm(&mut self, pat: &'hir hir::Pat<'hir>, expr: &'hir hir::Expr<'hir>) -> hir::Arm<'hir> {
+    pub(super) fn arm(
+        &mut self,
+        pat: &'hir hir::Pat<'hir>,
+        expr: &'hir hir::Expr<'hir>,
+    ) -> hir::Arm<'hir> {
         hir::Arm { hir_id: self.next_id(), pat, guard: None, span: expr.span, body: expr }
     }
 }

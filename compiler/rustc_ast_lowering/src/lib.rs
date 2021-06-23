@@ -43,7 +43,7 @@ use rustc_ast::walk_list;
 use rustc_ast::{self as ast, *};
 use rustc_ast_pretty::pprust;
 use rustc_data_structures::captures::Captures;
-use rustc_data_structures::fx::{FxHashMap, FxHashSet};
+use rustc_data_structures::fx::{FxHashMap, FxHashSet, FxIndexMap};
 use rustc_data_structures::sync::Lrc;
 use rustc_errors::{struct_span_err, Applicability};
 use rustc_hir as hir;
@@ -79,6 +79,7 @@ macro_rules! arena_vec {
 mod asm;
 mod expr;
 mod item;
+mod local;
 mod pat;
 mod path;
 
@@ -172,6 +173,11 @@ struct LoweringContext<'a, 'hir: 'a> {
 
     allow_try_trait: Option<Lrc<[Symbol]>>,
     allow_gen_future: Option<Lrc<[Symbol]>>,
+
+    /// This is `Some` while lowering the Pat of a `let-else`. Any bindings in the pattern are given
+    /// a new `HirId`. The lowered `HirId` of the binding is added here and then used to create
+    /// bindings in the outer `let` statement of the desugared `let-else`.
+    else_bindings: Option<FxIndexMap<hir::HirId, (hir::HirId, Ident)>>,
 }
 
 pub trait ResolverAstLowering {
@@ -333,6 +339,7 @@ pub fn lower_crate<'a, 'hir>(
         in_scope_lifetimes: Vec::new(),
         allow_try_trait: Some([sym::try_trait_v2][..].into()),
         allow_gen_future: Some([sym::gen_future][..].into()),
+        else_bindings: None,
     }
     .lower_crate(krate)
 }
@@ -1726,33 +1733,15 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
     }
 
     fn lower_local(&mut self, l: &Local) -> hir::Local<'hir> {
-        let ty = l.ty.as_ref().map(|t| {
-            let mut capturable_lifetimes;
-            self.lower_ty(
-                t,
-                if self.sess.features_untracked().impl_trait_in_bindings {
-                    capturable_lifetimes = FxHashSet::default();
-                    ImplTraitContext::OtherOpaqueTy {
-                        capturable_lifetimes: &mut capturable_lifetimes,
-                        origin: hir::OpaqueTyOrigin::Binding,
-                    }
-                } else {
-                    ImplTraitContext::Disallowed(ImplTraitPosition::Binding)
-                },
-            )
-        });
-        // todo lower else
-        let init = l.init.as_ref().map(|(init, _els)| self.lower_expr(init));
+        if let Some((scrutinee, Some(els))) = &l.init {
+            return self.lower_local_let_else(l, scrutinee, els);
+        }
+        let ty = self.lower_local_ty(&l.ty);
+        let init = l.init.as_ref().map(|(init, _)| self.lower_expr(init));
+        let pat = self.lower_pat(&l.pat);
         let hir_id = self.lower_node_id(l.id);
         self.lower_attrs(hir_id, &l.attrs);
-        hir::Local {
-            hir_id,
-            ty,
-            pat: self.lower_pat(&l.pat),
-            init,
-            span: l.span,
-            source: hir::LocalSource::Normal,
-        }
+        hir::Local { hir_id, ty, pat, init, span: l.span, source: hir::LocalSource::Normal }
     }
 
     fn lower_fn_params_to_names(&mut self, decl: &FnDecl) -> &'hir [Ident] {

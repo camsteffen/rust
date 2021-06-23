@@ -1857,6 +1857,8 @@ pub enum MatchSource {
     IfLetDesugar { contains_else_clause: bool },
     /// An `if let _ = _ => { .. }` match guard.
     IfLetGuardDesugar,
+    /// A `let _ = _ else { .. }` desugared to `let (..) = match _ { _ => (..), _ => { .. } }`
+    LetElseDesugar,
     /// A `while _ { .. }` (which was desugared to a `loop { match _ { .. } }`).
     WhileDesugar,
     /// A `while let _ = _ { .. }` (which was desugared to a
@@ -1876,6 +1878,7 @@ impl MatchSource {
         match self {
             Normal => "match",
             IfLetDesugar { .. } | IfLetGuardDesugar => "if",
+            LetElseDesugar => "let-else",
             WhileDesugar | WhileLetDesugar => "while",
             ForLoopDesugar => "for",
             TryDesugar => "?",

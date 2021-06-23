@@ -12,13 +12,19 @@ use rustc_span::{source_map::Spanned, Span};
 impl<'a, 'hir> LoweringContext<'a, 'hir> {
     crate fn lower_pat(&mut self, mut pattern: &Pat) -> &'hir hir::Pat<'hir> {
         ensure_sufficient_stack(|| {
+            let mut pat_id = None;
             // loop here to avoid recursion
-            let node = loop {
+            let kind = loop {
                 match pattern.kind {
                     PatKind::Wild => break hir::PatKind::Wild,
                     PatKind::Ident(ref binding_mode, ident, ref sub) => {
                         let lower_sub = |this: &mut Self| sub.as_ref().map(|s| this.lower_pat(&*s));
-                        break self.lower_pat_ident(pattern, binding_mode, ident, lower_sub);
+                        let (node, opt_pat_id) =
+                            self.lower_pat_ident(pattern, binding_mode, ident, lower_sub);
+                        if let Some(id) = opt_pat_id {
+                            pat_id = Some(id);
+                        }
+                        break node;
                     }
                     PatKind::Lit(ref e) => break hir::PatKind::Lit(self.lower_expr(e)),
                     PatKind::TupleStruct(ref qself, ref path, ref pats) => {
@@ -93,7 +99,13 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
                 }
             };
 
-            self.pat_with_node_id_of(pattern, node)
+            let hir_id = pat_id.unwrap_or_else(|| self.lower_node_id(pattern.id));
+            self.arena.alloc(hir::Pat {
+                hir_id,
+                kind,
+                span: pattern.span,
+                default_binding_modes: true,
+            })
         })
     }
 
@@ -171,8 +183,16 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
         // Lowers `$bm $ident @ ..` to `$bm $ident @ _`.
         let lower_rest_sub = |this: &mut Self, pat, bm, ident, sub| {
             let lower_sub = |this: &mut Self| Some(this.pat_wild_with_node_id_of(sub));
-            let node = this.lower_pat_ident(pat, bm, ident, lower_sub);
-            this.pat_with_node_id_of(pat, node)
+            let (kind, pat_id) = this.lower_pat_ident(pat, bm, ident, lower_sub);
+            match pat_id {
+                None => this.pat_with_node_id_of(pat, kind),
+                Some(hir_id) => this.arena.alloc(hir::Pat {
+                    hir_id,
+                    kind,
+                    span: pat.span,
+                    default_binding_modes: true,
+                }),
+            }
         };
 
         let mut iter = pats.iter();
@@ -231,31 +251,46 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
         binding_mode: &BindingMode,
         ident: Ident,
         lower_sub: impl FnOnce(&mut Self) -> Option<&'hir hir::Pat<'hir>>,
-    ) -> hir::PatKind<'hir> {
-        match self.resolver.get_partial_res(p.id).map(|d| d.base_res()) {
-            // `None` can occur in body-less function signatures
-            res @ (None | Some(Res::Local(_))) => {
-                let canonical_id = match res {
-                    Some(Res::Local(id)) => id,
-                    _ => p.id,
-                };
-
-                hir::PatKind::Binding(
-                    self.lower_binding_mode(binding_mode),
-                    self.lower_node_id(canonical_id),
-                    ident,
-                    lower_sub(self),
-                )
-            }
-            Some(res) => hir::PatKind::Path(hir::QPath::Resolved(
-                None,
-                self.arena.alloc(hir::Path {
-                    span: ident.span,
-                    res: self.lower_res(res),
-                    segments: arena_vec![self; hir::PathSegment::from_ident(ident)],
-                }),
-            )),
+    ) -> (hir::PatKind<'hir>, Option<hir::HirId>) {
+        // `None` can occur in body-less function signatures
+        let res = self.resolver.get_partial_res(p.id).map_or(Res::Local(p.id), |d| d.base_res());
+        if let Res::Local(canonical_id) = res {
+            let hir_id = self.lower_node_id(canonical_id);
+            let mut pat_id = None;
+            // If `else_bindings` is `Some`, we are desugaring a let-else pattern
+            let hir_id = match &self.else_bindings {
+                None => hir_id,
+                Some(bindings) => match bindings.get(&hir_id) {
+                    None => {
+                        // Generate a new HirId for this binding and place the lowered HirId
+                        // into `else_bindings`.
+                        let inner_id = self.next_id();
+                        // need to re-borrow after calling `self.next_id()`
+                        self.else_bindings.as_mut().unwrap().insert(hir_id, (inner_id, ident));
+                        pat_id = Some(inner_id);
+                        inner_id
+                    }
+                    // repeated OR binding
+                    Some(&(inner_id, _)) => inner_id,
+                },
+            };
+            let node = hir::PatKind::Binding(
+                self.lower_binding_mode(binding_mode),
+                hir_id,
+                ident,
+                lower_sub(self),
+            );
+            return (node, pat_id);
         }
+        let node = hir::PatKind::Path(hir::QPath::Resolved(
+            None,
+            self.arena.alloc(hir::Path {
+                span: ident.span,
+                res: self.lower_res(res),
+                segments: arena_vec![self; hir::PathSegment::from_ident(ident)],
+            }),
+        ));
+        (node, None)
     }
 
     fn lower_binding_mode(&mut self, b: &BindingMode) -> hir::BindingAnnotation {
