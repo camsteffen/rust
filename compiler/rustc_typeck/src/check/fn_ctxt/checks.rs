@@ -866,9 +866,9 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         hir_id: hir::HirId,
     ) -> (Res, Ty<'tcx>) {
         match *qpath {
-            QPath::Resolved(ref maybe_qself, ref path) => {
-                let self_ty = maybe_qself.as_ref().map(|qself| self.to_ty(qself));
-                let ty = <dyn AstConv<'_>>::res_to_ty(self, self_ty, path, true);
+            QPath::Resolved(maybe_qself, ref path) => {
+                let self_ty = maybe_qself.map(|qself| (qself, self.to_ty(qself)));
+                let ty = <dyn AstConv<'_>>::res_to_ty(self, hir_id, self_ty, path, true);
                 (path.res, ty)
             }
             QPath::TypeRelative(ref qself, ref segment) => {

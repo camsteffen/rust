@@ -1822,19 +1822,29 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
 
     fn qpath_to_ty(
         &self,
+        hir_id: hir::HirId,
         span: Span,
-        opt_self_ty: Option<Ty<'tcx>>,
+        opt_self_ty: Option<(&hir::Ty<'_>, Ty<'tcx>)>,
         item_def_id: DefId,
         trait_segment: &hir::PathSegment<'_>,
         item_segment: &hir::PathSegment<'_>,
     ) -> Ty<'tcx> {
         let tcx = self.tcx();
 
+        if let Some((hir_ty, ty)) = opt_self_ty {
+            if let hir::TyKind::Path(hir::QPath::Resolved(None, path)) = hir_ty.kind {
+                return self
+                    .associated_path_to_ty(hir_id, span, ty, path.res, item_segment, false)
+                    .map(|(ty, _, _)| ty)
+                    .unwrap_or_else(|_| tcx.ty_error());
+            }
+        }
+
         let trait_def_id = tcx.parent(item_def_id).unwrap();
 
         debug!("qpath_to_ty: trait_def_id={:?}", trait_def_id);
 
-        let self_ty = if let Some(ty) = opt_self_ty {
+        let self_ty = if let Some((_, ty)) = opt_self_ty {
             ty
         } else {
             let path_str = tcx.def_path_str(trait_def_id);
@@ -2075,7 +2085,8 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
     // Check a type `Path` and convert it to a `Ty`.
     pub fn res_to_ty(
         &self,
-        opt_self_ty: Option<Ty<'tcx>>,
+        hir_id: hir::HirId,
+        opt_self_ty: Option<(&hir::Ty<'_>, Ty<'tcx>)>,
         path: &hir::Path<'_>,
         permit_variants: bool,
     ) -> Ty<'tcx> {
@@ -2104,14 +2115,14 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                 | DefKind::ForeignTy,
                 did,
             ) => {
-                assert_eq!(opt_self_ty, None);
+                assert_matches!(opt_self_ty, None);
                 self.prohibit_generics(path.segments.split_last().unwrap().1);
                 self.ast_path_to_ty(span, did, path.segments.last().unwrap())
             }
             Res::Def(kind @ DefKind::Variant, def_id) if permit_variants => {
                 // Convert "variant type" as if it were a real type.
                 // The resulting `Ty` is type of the variant's enum for now.
-                assert_eq!(opt_self_ty, None);
+                assert_matches!(opt_self_ty, None);
 
                 let path_segs =
                     self.def_ids_for_value_path_segments(&path.segments, None, kind, def_id);
@@ -2127,7 +2138,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                 self.ast_path_to_ty(span, *def_id, &path.segments[*index])
             }
             Res::Def(DefKind::TyParam, def_id) => {
-                assert_eq!(opt_self_ty, None);
+                assert_matches!(opt_self_ty, None);
                 self.prohibit_generics(path.segments);
 
                 let hir_id = tcx.hir().local_def_id_to_hir_id(def_id.expect_local());
@@ -2139,13 +2150,13 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             }
             Res::SelfTy(Some(_), None) => {
                 // `Self` in trait or type alias.
-                assert_eq!(opt_self_ty, None);
+                assert_matches!(opt_self_ty, None);
                 self.prohibit_generics(path.segments);
                 tcx.types.self_param
             }
             Res::SelfTy(_, Some((def_id, forbid_generic))) => {
                 // `Self` in impl (we know the concrete type).
-                assert_eq!(opt_self_ty, None);
+                assert_matches!(opt_self_ty, None);
                 self.prohibit_generics(path.segments);
                 // Try to evaluate any array length constants.
                 let normalized_ty = self.normalize_ty(span, tcx.at(span).type_of(def_id));
@@ -2171,6 +2182,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                 debug_assert!(path.segments.len() >= 2);
                 self.prohibit_generics(&path.segments[..path.segments.len() - 2]);
                 self.qpath_to_ty(
+                    hir_id,
                     span,
                     opt_self_ty,
                     def_id,
@@ -2179,7 +2191,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                 )
             }
             Res::PrimTy(prim_ty) => {
-                assert_eq!(opt_self_ty, None);
+                assert_matches!(opt_self_ty, None);
                 self.prohibit_generics(path.segments);
                 match prim_ty {
                     hir::PrimTy::Bool => tcx.types.bool,
@@ -2241,10 +2253,10 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             hir::TyKind::TraitObject(ref bounds, ref lifetime, _) => {
                 self.conv_object_ty_poly_trait_ref(ast_ty.span, bounds, lifetime, borrowed)
             }
-            hir::TyKind::Path(hir::QPath::Resolved(ref maybe_qself, ref path)) => {
+            hir::TyKind::Path(hir::QPath::Resolved(maybe_qself, ref path)) => {
                 debug!(?maybe_qself, ?path);
-                let opt_self_ty = maybe_qself.as_ref().map(|qself| self.ast_ty_to_ty(qself));
-                self.res_to_ty(opt_self_ty, path, false)
+                let opt_self_ty = maybe_qself.map(|qself| (qself, self.ast_ty_to_ty(qself)));
+                self.res_to_ty(ast_ty.hir_id, opt_self_ty, path, false)
             }
             hir::TyKind::OpaqueDef(item_id, ref lifetimes) => {
                 let opaque_ty = tcx.hir().item(item_id);
