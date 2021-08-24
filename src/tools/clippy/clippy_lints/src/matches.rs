@@ -21,8 +21,8 @@ use rustc_errors::Applicability;
 use rustc_hir::def::{CtorKind, DefKind, Res};
 use rustc_hir::LangItem::{OptionNone, OptionSome};
 use rustc_hir::{
-    self as hir, Arm, BindingAnnotation, Block, BorrowKind, Expr, ExprKind, Guard, HirId, Local, MatchSource,
-    Mutability, Node, Pat, PatKind, PathSegment, QPath, RangeEnd, TyKind,
+    self as hir, Arm, BindingAnnotation, Block, BorrowKind, Expr, ExprKind, HirId, Local, MatchSource, Mutability,
+    Node, Pat, PatKind, PathSegment, QPath, RangeEnd, TyKind,
 };
 use rustc_hir::{HirIdMap, HirIdSet};
 use rustc_lint::{LateContext, LateLintPass, LintContext};
@@ -1318,7 +1318,7 @@ fn check_match_like_matches<'tcx>(cx: &LateContext<'tcx>, expr: &'tcx Expr<'_>) 
                     cx.tcx.hir().attrs(arm.hir_id),
                     Some(arm.pat),
                     arm.body,
-                    arm.guard.as_ref(),
+                    arm.guard,
                 )
             }),
             expr,
@@ -1347,7 +1347,7 @@ where
                 &'a [Attribute],
                 Option<&'a Pat<'b>>,
                 &'a Expr<'b>,
-                Option<&'a Guard<'b>>,
+                Option<&'a Expr<'b>>,
             ),
         >,
 {
@@ -1385,7 +1385,7 @@ where
                     })
                     .join(" | ")
             };
-            let pat_and_guard = if let Some(Guard::If(g)) = first_guard {
+            let pat_and_guard = if let Some(g) = first_guard {
                 format!("{} if {}", pat, snippet_with_applicability(cx, g.span, "..", &mut applicability))
             } else {
                 pat

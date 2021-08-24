@@ -3,8 +3,7 @@ use clippy_utils::source::snippet;
 use clippy_utils::{contains_name, higher, iter_input_pats};
 use rustc_hir::intravisit::FnKind;
 use rustc_hir::{
-    Block, Body, Expr, ExprKind, FnDecl, Guard, HirId, Local, MutTy, Pat, PatKind, Path, QPath, StmtKind, Ty, TyKind,
-    UnOp,
+    Block, Body, Expr, ExprKind, FnDecl, HirId, Local, MutTy, Pat, PatKind, Path, QPath, StmtKind, Ty, TyKind, UnOp,
 };
 use rustc_lint::{LateContext, LateLintPass, LintContext};
 use rustc_middle::lint::in_external_macro;
@@ -356,14 +355,8 @@ fn check_expr<'tcx>(cx: &LateContext<'tcx>, expr: &'tcx Expr<'_>, bindings: &mut
             for arm in arms {
                 check_pat(cx, arm.pat, Some(init), arm.pat.span, bindings);
                 // This is ugly, but needed to get the right type
-                if let Some(ref guard) = arm.guard {
-                    match guard {
-                        Guard::If(if_expr) => check_expr(cx, if_expr, bindings),
-                        Guard::IfLet(guard_pat, guard_expr) => {
-                            check_pat(cx, guard_pat, Some(*guard_expr), guard_pat.span, bindings);
-                            check_expr(cx, guard_expr, bindings);
-                        },
-                    }
+                if let Some(guard) = arm.guard {
+                    check_expr(cx, guard, bindings);
                 }
                 check_expr(cx, arm.body, bindings);
                 bindings.truncate(len);

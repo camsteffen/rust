@@ -81,7 +81,7 @@ impl<'tcx> LateLintPass<'tcx> for DeepCodeInspector {
         print_pat(cx, arm.pat, 1);
         if let Some(ref guard) = arm.guard {
             println!("guard:");
-            print_guard(cx, guard, 1);
+            print_expr(cx, guard, 1);
         }
         println!("body:");
         print_expr(cx, arm.body, 1);
@@ -535,22 +535,6 @@ fn print_pat(cx: &LateContext<'_>, pat: &hir::Pat<'_>, indent: usize) {
             for pat in last_pats {
                 print_pat(cx, pat, indent + 1);
             }
-        },
-    }
-}
-
-fn print_guard(cx: &LateContext<'_>, guard: &hir::Guard<'_>, indent: usize) {
-    let ind = "  ".repeat(indent);
-    println!("{}+", ind);
-    match guard {
-        hir::Guard::If(expr) => {
-            println!("{}If", ind);
-            print_expr(cx, expr, indent + 1);
-        },
-        hir::Guard::IfLet(pat, expr) => {
-            println!("{}IfLet", ind);
-            print_pat(cx, pat, indent + 1);
-            print_expr(cx, expr, indent + 1);
         },
     }
 }

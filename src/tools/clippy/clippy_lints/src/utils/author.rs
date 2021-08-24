@@ -375,26 +375,8 @@ impl<'tcx> Visitor<'tcx> for PrintVisitor {
                     if let Some(ref guard) = arm.guard {
                         let guard_pat = self.next("guard");
                         println!("    if let Some(ref {}) = {}[{}].guard;", guard_pat, arms_pat, i);
-                        match guard {
-                            hir::Guard::If(if_expr) => {
-                                let if_expr_pat = self.next("expr");
-                                println!("    if let Guard::If(ref {}) = {};", if_expr_pat, guard_pat);
-                                self.current = if_expr_pat;
-                                self.visit_expr(if_expr);
-                            },
-                            hir::Guard::IfLet(if_let_pat, if_let_expr) => {
-                                let if_let_pat_pat = self.next("pat");
-                                let if_let_expr_pat = self.next("expr");
-                                println!(
-                                    "    if let Guard::IfLet(ref {}, ref {}) = {};",
-                                    if_let_pat_pat, if_let_expr_pat, guard_pat
-                                );
-                                self.current = if_let_expr_pat;
-                                self.visit_expr(if_let_expr);
-                                self.current = if_let_pat_pat;
-                                self.visit_pat(if_let_pat);
-                            },
-                        }
+                        self.current = guard_pat;
+                        self.visit_expr(guard);
                     }
                     self.current = format!("{}[{}].pat", arms_pat, i);
                     self.visit_pat(arm.pat);

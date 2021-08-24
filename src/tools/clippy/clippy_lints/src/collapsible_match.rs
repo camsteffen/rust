@@ -3,7 +3,7 @@ use clippy_utils::visitors::LocalUsedVisitor;
 use clippy_utils::{higher, is_lang_ctor, is_unit_expr, path_to_local, peel_ref_operators, SpanlessEq};
 use if_chain::if_chain;
 use rustc_hir::LangItem::OptionNone;
-use rustc_hir::{Arm, Expr, ExprKind, Guard, HirId, MatchSource, Pat, PatKind, StmtKind};
+use rustc_hir::{Arm, Expr, ExprKind, HirId, MatchSource, Pat, PatKind, StmtKind};
 use rustc_lint::{LateContext, LateLintPass};
 use rustc_session::{declare_lint_pass, declare_tool_lint};
 use rustc_span::{MultiSpan, Span};
@@ -53,7 +53,7 @@ impl<'tcx> LateLintPass<'tcx> for CollapsibleMatch {
             Some(IfLetOrMatch::Match(_, arms, _)) => {
                 if let Some(els_arm) = arms.iter().rfind(|arm| arm_is_wild_like(cx, arm)) {
                     for arm in arms {
-                        check_arm(cx, true, arm.pat, arm.body, arm.guard.as_ref(), Some(els_arm.body));
+                        check_arm(cx, true, arm.pat, arm.body, arm.guard, Some(els_arm.body));
                     }
                 }
             }
@@ -70,7 +70,7 @@ fn check_arm<'tcx>(
     outer_is_match: bool,
     outer_pat: &'tcx Pat<'tcx>,
     outer_then_body: &'tcx Expr<'tcx>,
-    outer_guard: Option<&'tcx Guard<'tcx>>,
+    outer_guard: Option<&'tcx Expr<'tcx>>,
     outer_else_body: Option<&'tcx Expr<'tcx>>
 ) {
     let inner_expr = strip_singleton_blocks(outer_then_body);
@@ -107,7 +107,7 @@ fn check_arm<'tcx>(
         };
         // the binding must not be used in the if guard
         let mut used_visitor = LocalUsedVisitor::new(cx, binding_id);
-        if outer_guard.map_or(true, |(Guard::If(e) | Guard::IfLet(_, e))| !used_visitor.check_expr(e));
+        if outer_guard.map_or(true, |e| !used_visitor.check_expr(e));
         // ...or anywhere in the inner expression
         if match inner {
             IfLetOrMatch::IfLet(_, _, body, els) => {
