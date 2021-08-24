@@ -366,9 +366,6 @@ impl<'tcx> Visitor<'tcx> for IrMaps<'tcx> {
 
     fn visit_arm(&mut self, arm: &'tcx hir::Arm<'tcx>) {
         self.add_from_pat(&arm.pat);
-        if let Some(hir::Guard::IfLet(ref pat, _)) = arm.guard {
-            self.add_from_pat(pat);
-        }
         intravisit::walk_arm(self, arm);
     }
 
@@ -908,13 +905,8 @@ impl<'a, 'tcx> Liveness<'a, 'tcx> {
                 for arm in arms {
                     let body_succ = self.propagate_through_expr(&arm.body, succ);
 
-                    let guard_succ = arm.guard.as_ref().map_or(body_succ, |g| match g {
-                        hir::Guard::If(e) => self.propagate_through_expr(e, body_succ),
-                        hir::Guard::IfLet(pat, e) => {
-                            let let_bind = self.define_bindings_in_pat(pat, body_succ);
-                            self.propagate_through_expr(e, let_bind)
-                        }
-                    });
+                    let guard_succ =
+                        arm.guard.map_or(body_succ, |e| self.propagate_through_expr(e, body_succ));
                     let arm_succ = self.define_bindings_in_pat(&arm.pat, guard_succ);
                     self.merge_from_succ(ln, arm_succ);
                 }

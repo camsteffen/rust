@@ -2061,23 +2061,10 @@ impl<'a> State<'a> {
         self.print_outer_attributes(&self.attrs(arm.hir_id));
         self.print_pat(&arm.pat);
         self.s.space();
-        if let Some(ref g) = arm.guard {
-            match g {
-                hir::Guard::If(e) => {
-                    self.word_space("if");
-                    self.print_expr(&e);
-                    self.s.space();
-                }
-                hir::Guard::IfLet(pat, e) => {
-                    self.word_nbsp("if");
-                    self.word_nbsp("let");
-                    self.print_pat(&pat);
-                    self.s.space();
-                    self.word_space("=");
-                    self.print_expr(&e);
-                    self.s.space();
-                }
-            }
+        if let Some(e) = arm.guard {
+            self.word_space("if");
+            self.print_expr(&e);
+            self.s.space();
         }
         self.word_space("=>");
 

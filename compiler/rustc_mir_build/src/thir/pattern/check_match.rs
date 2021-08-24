@@ -163,11 +163,6 @@ impl<'tcx> MatchVisitor<'_, 'tcx> {
         for arm in arms {
             // Check the arm for some things unrelated to exhaustiveness.
             self.check_patterns(&arm.pat);
-            if let Some(hir::Guard::IfLet(ref pat, _)) = arm.guard {
-                self.check_patterns(pat);
-                let tpat = self.lower_pattern(&mut cx, pat, &mut false).0;
-                check_let_reachability(&mut cx, pat.hir_id, &tpat, tpat.span);
-            }
         }
 
         let mut have_errors = false;
@@ -760,34 +755,31 @@ pub enum LetSource {
 
 fn let_source(tcx: TyCtxt<'_>, pat_id: HirId) -> LetSource {
     let hir = tcx.hir();
-    let parent = hir.get_parent_node(pat_id);
-    match hir.get(parent) {
+    let parent0 = hir.get_parent_node(pat_id);
+    let parent1 = hir.get_parent_node(parent0);
+    let parent1_node = hir.get(parent1);
+
+    match parent1_node {
         hir::Node::Arm(hir::Arm {
-            guard: Some(hir::Guard::IfLet(&hir::Pat { hir_id, .. }, _)),
+            guard: Some(hir::Expr { kind: hir::ExprKind::Let(&hir::Pat { hir_id, .. }, ..), .. }),
             ..
         }) if hir_id == pat_id => {
             return LetSource::IfLetGuard;
         }
-        _ => {}
-    }
-    let parent_parent = hir.get_parent_node(parent);
-    let parent_parent_node = hir.get(parent_parent);
-
-    let parent_parent_parent = hir.get_parent_node(parent_parent);
-    let parent_parent_parent_parent = hir.get_parent_node(parent_parent_parent);
-    let parent_parent_parent_parent_node = hir.get(parent_parent_parent_parent);
-
-    if let hir::Node::Expr(hir::Expr {
-        kind: hir::ExprKind::Loop(_, _, hir::LoopSource::While, _),
-        ..
-    }) = parent_parent_parent_parent_node
-    {
-        LetSource::WhileLet
-    } else if let hir::Node::Expr(hir::Expr { kind: hir::ExprKind::If { .. }, .. }) =
-        parent_parent_node
-    {
-        LetSource::IfLet
-    } else {
-        LetSource::GenericLet
+        hir::Node::Expr(hir::Expr { kind: hir::ExprKind::If { .. }, .. }) => {
+            let parent2 = hir.get_parent_node(parent1);
+            let parent3 = hir.get_parent_node(parent2);
+            let parent3_node = hir.get(parent3);
+            if let hir::Node::Expr(hir::Expr {
+                kind: hir::ExprKind::Loop(_, _, hir::LoopSource::While, _),
+                ..
+            }) = parent3_node
+            {
+                LetSource::WhileLet
+            } else {
+                LetSource::IfLet
+            }
+        }
+        _ => LetSource::GenericLet,
     }
 }

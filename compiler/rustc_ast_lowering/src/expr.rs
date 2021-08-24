@@ -469,13 +469,7 @@ impl<'hir> LoweringContext<'_, 'hir> {
 
     fn lower_arm(&mut self, arm: &Arm) -> hir::Arm<'hir> {
         let pat = self.lower_pat(&arm.pat);
-        let guard = arm.guard.as_ref().map(|cond| {
-            if let ExprKind::Let(ref pat, ref scrutinee, _) = cond.kind {
-                hir::Guard::IfLet(self.lower_pat(pat), self.lower_expr(scrutinee))
-            } else {
-                hir::Guard::If(self.lower_expr(cond))
-            }
-        });
+        let guard = arm.guard.as_ref().map(|e| self.lower_expr(e));
         let hir_id = self.next_id();
         self.lower_attrs(hir_id, &arm.attrs);
         hir::Arm { hir_id, pat, guard, body: self.lower_expr(&arm.body), span: arm.span }

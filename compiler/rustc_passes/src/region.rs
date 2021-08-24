@@ -158,8 +158,10 @@ fn resolve_arm<'tcx>(visitor: &mut RegionResolutionVisitor<'tcx>, arm: &'tcx hir
 
     visitor.terminating_scopes.insert(arm.body.hir_id.local_id);
 
-    if let Some(hir::Guard::If(ref expr)) = arm.guard {
-        visitor.terminating_scopes.insert(expr.hir_id.local_id);
+    if let Some(expr) = arm.guard {
+        if !matches!(expr.kind, hir::ExprKind::Let(..)) {
+            visitor.terminating_scopes.insert(expr.hir_id.local_id);
+        }
     }
 
     intravisit::walk_arm(visitor, arm);

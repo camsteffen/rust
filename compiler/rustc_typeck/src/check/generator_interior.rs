@@ -10,7 +10,7 @@ use rustc_hir::def::{CtorKind, DefKind, Res};
 use rustc_hir::def_id::DefId;
 use rustc_hir::hir_id::HirIdSet;
 use rustc_hir::intravisit::{self, NestedVisitorMap, Visitor};
-use rustc_hir::{Arm, Expr, ExprKind, Guard, HirId, Pat, PatKind};
+use rustc_hir::{Arm, Expr, ExprKind, HirId, Pat, PatKind};
 use rustc_middle::middle::region::{self, YieldData};
 use rustc_middle::ty::{self, Ty};
 use rustc_span::Span;
@@ -252,7 +252,7 @@ impl<'a, 'tcx> Visitor<'tcx> for InteriorVisitor<'a, 'tcx> {
     fn visit_arm(&mut self, arm: &'tcx Arm<'tcx>) {
         let Arm { guard, pat, body, .. } = arm;
         self.visit_pat(pat);
-        if let Some(ref g) = guard {
+        if let Some(e) = guard {
             self.guard_bindings.push(<_>::default());
             ArmPatCollector {
                 guard_bindings_set: &mut self.guard_bindings_set,
@@ -263,15 +263,7 @@ impl<'a, 'tcx> Visitor<'tcx> for InteriorVisitor<'a, 'tcx> {
             }
             .visit_pat(pat);
 
-            match g {
-                Guard::If(ref e) => {
-                    self.visit_expr(e);
-                }
-                Guard::IfLet(ref pat, ref e) => {
-                    self.visit_pat(pat);
-                    self.visit_expr(e);
-                }
-            }
+            self.visit_expr(e);
 
             let mut scope_var_ids =
                 self.guard_bindings.pop().expect("should have pushed at least one earlier");

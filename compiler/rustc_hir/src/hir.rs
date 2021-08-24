@@ -1208,15 +1208,9 @@ pub struct Arm<'hir> {
     /// If this pattern and the optional guard matches, then `body` is evaluated.
     pub pat: &'hir Pat<'hir>,
     /// Optional guard clause.
-    pub guard: Option<Guard<'hir>>,
+    pub guard: Option<&'hir Expr<'hir>>,
     /// The expression the arm evaluates to if this arm matches.
     pub body: &'hir Expr<'hir>,
-}
-
-#[derive(Debug, HashStable_Generic)]
-pub enum Guard<'hir> {
-    If(&'hir Expr<'hir>),
-    IfLet(&'hir Pat<'hir>, &'hir Expr<'hir>),
 }
 
 #[derive(Debug, HashStable_Generic)]

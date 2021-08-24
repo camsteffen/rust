@@ -831,11 +831,11 @@ impl<'tcx> Cx<'tcx> {
     fn convert_arm(&mut self, arm: &'tcx hir::Arm<'tcx>) -> ArmId {
         let arm = Arm {
             pattern: self.pattern_from_hir(&arm.pat),
-            guard: arm.guard.as_ref().map(|g| match g {
-                hir::Guard::If(ref e) => Guard::If(self.mirror_expr(e)),
-                hir::Guard::IfLet(ref pat, ref e) => {
+            guard: arm.guard.as_ref().map(|g| match g.kind {
+                hir::ExprKind::Let(pat, e, ..) => {
                     Guard::IfLet(self.pattern_from_hir(pat), self.mirror_expr(e))
                 }
+                _ => Guard::If(self.mirror_expr(g)),
             }),
             body: self.mirror_expr(arm.body),
             lint_level: LintLevel::Explicit(arm.hir_id),

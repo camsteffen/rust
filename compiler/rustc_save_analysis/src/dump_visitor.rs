@@ -1411,8 +1411,10 @@ impl<'tcx> Visitor<'tcx> for DumpVisitor<'tcx> {
 
     fn visit_arm(&mut self, arm: &'tcx hir::Arm<'tcx>) {
         self.process_var_decl(&arm.pat);
-        if let Some(hir::Guard::If(expr)) = &arm.guard {
-            self.visit_expr(expr);
+        if let Some(expr) = &arm.guard {
+            if !matches!(expr.kind, hir::ExprKind::Let(..)) {
+                self.visit_expr(expr);
+            }
         }
         self.visit_expr(&arm.body);
     }
