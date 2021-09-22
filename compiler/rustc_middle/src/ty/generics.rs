@@ -224,54 +224,44 @@ pub struct GenericPredicates<'tcx> {
 
 impl<'tcx> GenericPredicates<'tcx> {
     pub fn instantiate(
-        &self,
+        self,
         tcx: TyCtxt<'tcx>,
         substs: SubstsRef<'tcx>,
     ) -> InstantiatedPredicates<'tcx> {
-        let mut instantiated = InstantiatedPredicates::empty();
-        self.instantiate_into(tcx, &mut instantiated, substs);
-        instantiated
+        instantiate(tcx, self, |p| p.subst(tcx, substs))
     }
 
     pub fn instantiate_own(
-        &self,
+        self,
         tcx: TyCtxt<'tcx>,
         substs: SubstsRef<'tcx>,
     ) -> InstantiatedPredicates<'tcx> {
-        InstantiatedPredicates {
-            predicates: self.predicates.iter().map(|(p, _)| p.subst(tcx, substs)).collect(),
-            spans: self.predicates.iter().map(|(_, sp)| *sp).collect(),
-        }
+        let (predicates, spans) =
+            self.predicates.iter().map(|(p, s)| (p.subst(tcx, substs), s)).unzip();
+        InstantiatedPredicates { predicates, spans }
     }
 
-    fn instantiate_into(
-        &self,
-        tcx: TyCtxt<'tcx>,
-        instantiated: &mut InstantiatedPredicates<'tcx>,
-        substs: SubstsRef<'tcx>,
-    ) {
-        if let Some(def_id) = self.parent {
-            tcx.predicates_of(def_id).instantiate_into(tcx, instantiated, substs);
-        }
-        instantiated.predicates.extend(self.predicates.iter().map(|(p, _)| p.subst(tcx, substs)));
-        instantiated.spans.extend(self.predicates.iter().map(|(_, sp)| *sp));
+    pub fn instantiate_identity(self, tcx: TyCtxt<'tcx>) -> InstantiatedPredicates<'tcx> {
+        instantiate(tcx, self, |p| p)
     }
+}
 
-    pub fn instantiate_identity(&self, tcx: TyCtxt<'tcx>) -> InstantiatedPredicates<'tcx> {
-        let mut instantiated = InstantiatedPredicates::empty();
-        self.instantiate_identity_into(tcx, &mut instantiated);
-        instantiated
+fn instantiate<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    preds: GenericPredicates<'tcx>,
+    subst: impl Fn(Predicate<'tcx>) -> Predicate<'tcx>,
+) -> InstantiatedPredicates<'tcx> {
+    let mut len = preds.predicates.len();
+    let mut stack = vec![preds.predicates];
+    let mut parent = preds.parent;
+    while let Some(def_id) = parent {
+        let parent_preds = tcx.predicates_of(def_id);
+        len += parent_preds.predicates.len();
+        stack.push(parent_preds.predicates);
+        parent = parent_preds.parent;
     }
-
-    fn instantiate_identity_into(
-        &self,
-        tcx: TyCtxt<'tcx>,
-        instantiated: &mut InstantiatedPredicates<'tcx>,
-    ) {
-        if let Some(def_id) = self.parent {
-            tcx.predicates_of(def_id).instantiate_identity_into(tcx, instantiated);
-        }
-        instantiated.predicates.extend(self.predicates.iter().map(|(p, _)| p));
-        instantiated.spans.extend(self.predicates.iter().map(|(_, s)| s));
-    }
+    let mut data = (Vec::with_capacity(len), Vec::with_capacity(len));
+    data.extend(stack.into_iter().rev().flatten().map(|&(p, s)| (subst(p), s)));
+    let (predicates, spans) = data;
+    InstantiatedPredicates { predicates, spans }
 }
