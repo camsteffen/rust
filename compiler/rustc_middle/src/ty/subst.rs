@@ -644,14 +644,16 @@ impl<'a, 'tcx> TypeFolder<'tcx> for SubstFolder<'a, 'tcx> {
     }
 
     fn fold_ty(&mut self, t: Ty<'tcx>) -> Ty<'tcx> {
+        fn inner<'a, 'tcx>(this: &mut SubstFolder<'a, 'tcx>, t: Ty<'tcx>) -> Ty<'tcx> {
+            match *t.kind() {
+                ty::Param(p) => this.ty_for_param(p, t),
+                _ => t.super_fold_with(this),
+            }
+        }
         if !t.needs_subst() {
             return t;
         }
-
-        match *t.kind() {
-            ty::Param(p) => self.ty_for_param(p, t),
-            _ => t.super_fold_with(self),
-        }
+        inner(self, t)
     }
 
     fn fold_const(&mut self, c: ty::Const<'tcx>) -> ty::Const<'tcx> {
