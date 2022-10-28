@@ -198,7 +198,7 @@ impl<'a, 'tcx> ExprUseVisitor<'a, 'tcx> {
         self.walk_adjustment(expr);
 
         match expr.kind {
-            hir::ExprKind::Path(_) => {}
+            hir::ExprKind::Path(_) | hir::ExprKind::VarRef(..) => {}
 
             hir::ExprKind::Type(subexpr, _) => self.walk_expr(subexpr),
 
@@ -691,14 +691,8 @@ impl<'a, 'tcx> ExprUseVisitor<'a, 'tcx> {
                 {
                     debug!("walk_pat: pat.hir_id={:?} bm={:?}", pat.hir_id, bm);
 
-                    // pat_ty: the type of the binding being produced.
-                    let pat_ty = return_if_err!(mc.node_ty(pat.hir_id));
-                    debug!("walk_pat: pat_ty={:?}", pat_ty);
-
-                    let def = Res::Local(canonical_id);
-                    if let Ok(ref binding_place) = mc.cat_res(pat.hir_id, pat.span, pat_ty, def) {
-                        delegate.bind(binding_place, binding_place.hir_id);
-                    }
+                    let binding_place = return_if_err!(mc.cat_var(pat.hir_id, canonical_id));
+                    delegate.bind(&binding_place, binding_place.hir_id);
 
                     // Subtle: MIR desugaring introduces immutable borrows for each pattern
                     // binding when lowering pattern guards to ensure that the guard does not

@@ -1070,7 +1070,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         let tcx = self.tcx;
 
         let path_segs = match res {
-            Res::Local(_) | Res::SelfCtor(_) => vec![],
+            Res::SelfCtor(_) => vec![],
             Res::Def(kind, def_id) => <dyn AstConv<'_>>::def_ids_for_value_path_segments(
                 self, segments, self_ty, kind, def_id,
             ),
@@ -1129,13 +1129,6 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             }),
             |_| {},
         );
-
-        if let Res::Local(hid) = res {
-            let ty = self.local_ty(span, hid).decl_ty;
-            let ty = self.normalize_associated_types_in(span, ty);
-            self.write_ty(hir_id, ty);
-            return (ty, res);
-        }
 
         if generics_has_err {
             // Don't try to infer type parameters when prohibited generic arguments were given.

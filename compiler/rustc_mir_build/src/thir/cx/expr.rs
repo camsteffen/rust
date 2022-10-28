@@ -747,6 +747,7 @@ impl<'tcx> Cx<'tcx> {
                     ExprKind::ValueTypeAscription { source: mirrored, user_ty }
                 }
             }
+            hir::ExprKind::VarRef(var_hir_id, _) => self.convert_var(var_hir_id),
             hir::ExprKind::DropTemps(ref source) => {
                 ExprKind::Use { source: self.mirror_expr(source) }
             }
@@ -905,8 +906,6 @@ impl<'tcx> Cx<'tcx> {
                     arg: self.thir.exprs.push(Expr { ty, temp_lifetime, span: expr.span, kind }),
                 }
             }
-
-            Res::Local(var_hir_id) => self.convert_var(var_hir_id),
 
             _ => span_bug!(expr.span, "res `{:?}` not yet implemented", res),
         }

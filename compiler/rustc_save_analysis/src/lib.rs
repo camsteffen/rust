@@ -628,10 +628,6 @@ impl<'tcx> SaveContext<'tcx> {
                 }
             },
 
-            Node::Pat(&hir::Pat { kind: hir::PatKind::Binding(_, canonical_id, ..), .. }) => {
-                Res::Local(canonical_id)
-            }
-
             _ => Res::Err,
         }
     }
@@ -667,9 +663,6 @@ impl<'tcx> SaveContext<'tcx> {
         let span = self.span_from_span(span);
 
         match res {
-            Res::Local(id) => {
-                Some(Ref { kind: RefKind::Variable, span, ref_id: id_from_hir_id(id, self) })
-            }
             Res::Def(HirDefKind::Trait, def_id) if fn_type(path_seg) => {
                 Some(Ref { kind: RefKind::Type, span, ref_id: id_from_def_id(def_id) })
             }
@@ -739,6 +732,7 @@ impl<'tcx> SaveContext<'tcx> {
                 | HirDefKind::Generator,
                 _,
             )
+            | Res::Local(_)
             | Res::PrimTy(..)
             | Res::SelfTyParam { .. }
             | Res::SelfTyAlias { .. }

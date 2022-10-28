@@ -1,8 +1,7 @@
-//! Upvar (closure capture) collection from cross-body HIR uses of `Res::Local`s.
+//! Upvar (closure capture) collection from cross-body HIR uses of local vars.
 
 use rustc_data_structures::fx::{FxHashSet, FxIndexMap};
 use rustc_hir as hir;
-use rustc_hir::def::Res;
 use rustc_hir::intravisit::{self, Visitor};
 use rustc_hir::{self, HirId};
 use rustc_middle::ty::query::Providers;
@@ -66,14 +65,6 @@ impl CaptureCollector<'_, '_> {
 }
 
 impl<'tcx> Visitor<'tcx> for CaptureCollector<'_, 'tcx> {
-    fn visit_path(&mut self, path: &'tcx hir::Path<'tcx>, _: hir::HirId) {
-        if let Res::Local(var_id) = path.res {
-            self.visit_local_use(var_id, path.span);
-        }
-
-        intravisit::walk_path(self, path);
-    }
-
     fn visit_expr(&mut self, expr: &'tcx hir::Expr<'tcx>) {
         if let hir::ExprKind::Closure { .. } = expr.kind {
             let closure_def_id = self.tcx.hir().local_def_id(expr.hir_id);
@@ -90,6 +81,10 @@ impl<'tcx> Visitor<'tcx> for CaptureCollector<'_, 'tcx> {
                     self.visit_local_use(var_id, upvar.span);
                 }
             }
+        }
+
+        if let hir::ExprKind::VarRef(var_id, ident) = expr.kind {
+            self.visit_local_use(var_id, ident.span);
         }
 
         intravisit::walk_expr(self, expr);

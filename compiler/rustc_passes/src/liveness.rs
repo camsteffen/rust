@@ -404,14 +404,6 @@ impl<'tcx> Visitor<'tcx> for IrMaps<'tcx> {
 
     fn visit_expr(&mut self, expr: &'tcx Expr<'tcx>) {
         match expr.kind {
-            // live nodes required for uses or definitions of variables:
-            hir::ExprKind::Path(hir::QPath::Resolved(_, ref path)) => {
-                debug!("expr {}: path that leads to {:?}", expr.hir_id, path.res);
-                if let Res::Local(_var_hir_id) = path.res {
-                    self.add_live_node_for_node(expr.hir_id, ExprNode(expr.span, expr.hir_id));
-                }
-                intravisit::walk_expr(self, expr);
-            }
             hir::ExprKind::Closure { .. } => {
                 // Interesting control flow (for loops can contain labeled
                 // breaks or continues)
@@ -451,6 +443,10 @@ impl<'tcx> Visitor<'tcx> for IrMaps<'tcx> {
                 self.add_live_node_for_node(expr.hir_id, ExprNode(expr.span, expr.hir_id));
                 intravisit::walk_expr(self, expr);
             }
+            hir::ExprKind::VarRef(..) => {
+                self.add_live_node_for_node(expr.hir_id, ExprNode(expr.span, expr.hir_id));
+                intravisit::walk_expr(self, expr);
+            }
 
             // otherwise, live nodes are not required:
             hir::ExprKind::Index(..)
@@ -478,8 +474,7 @@ impl<'tcx> Visitor<'tcx> for IrMaps<'tcx> {
             | hir::ExprKind::Box(..)
             | hir::ExprKind::Type(..)
             | hir::ExprKind::Err
-            | hir::ExprKind::Path(hir::QPath::TypeRelative(..))
-            | hir::ExprKind::Path(hir::QPath::LangItem(..)) => {
+            | hir::ExprKind::Path(..) => {
                 intravisit::walk_expr(self, expr);
             }
         }
@@ -866,8 +861,8 @@ impl<'a, 'tcx> Liveness<'a, 'tcx> {
 
         match expr.kind {
             // Interesting cases with control flow or which gen/kill
-            hir::ExprKind::Path(hir::QPath::Resolved(_, ref path)) => {
-                self.access_path(expr.hir_id, path, succ, ACC_READ | ACC_USE)
+            hir::ExprKind::VarRef(hid, ident) => {
+                self.access_var(expr.hir_id, hid, succ, ACC_READ | ACC_USE, ident.span)
             }
 
             hir::ExprKind::Field(ref e, _) => self.propagate_through_expr(&e, succ),
@@ -1133,8 +1128,7 @@ impl<'a, 'tcx> Liveness<'a, 'tcx> {
             hir::ExprKind::Lit(..)
             | hir::ExprKind::ConstBlock(..)
             | hir::ExprKind::Err
-            | hir::ExprKind::Path(hir::QPath::TypeRelative(..))
-            | hir::ExprKind::Path(hir::QPath::LangItem(..)) => succ,
+            | hir::ExprKind::Path(..) => succ,
 
             // Note that labels have been resolved, so we don't need to look
             // at the label ident
@@ -1202,8 +1196,8 @@ impl<'a, 'tcx> Liveness<'a, 'tcx> {
     // see comment on propagate_through_place()
     fn write_place(&mut self, expr: &Expr<'_>, succ: LiveNode, acc: u32) -> LiveNode {
         match expr.kind {
-            hir::ExprKind::Path(hir::QPath::Resolved(_, ref path)) => {
-                self.access_path(expr.hir_id, path, succ, acc)
+            hir::ExprKind::VarRef(hid, ident) => {
+                self.access_var(expr.hir_id, hid, succ, acc, ident.span)
             }
 
             // We do not track other places, so just propagate through
@@ -1229,19 +1223,6 @@ impl<'a, 'tcx> Liveness<'a, 'tcx> {
             self.acc(ln, var, acc);
         }
         ln
-    }
-
-    fn access_path(
-        &mut self,
-        hir_id: HirId,
-        path: &hir::Path<'_>,
-        succ: LiveNode,
-        acc: u32,
-    ) -> LiveNode {
-        match path.res {
-            Res::Local(hid) => self.access_var(hir_id, hid, succ, acc, path.span),
-            _ => succ,
-        }
     }
 
     fn propagate_through_loop(
@@ -1428,6 +1409,7 @@ fn check_expr<'tcx>(this: &mut Liveness<'_, 'tcx>, expr: &'tcx Expr<'tcx>) {
         | hir::ExprKind::Repeat(..)
         | hir::ExprKind::Closure { .. }
         | hir::ExprKind::Path(_)
+        | hir::ExprKind::VarRef(..)
         | hir::ExprKind::Yield(..)
         | hir::ExprKind::Box(..)
         | hir::ExprKind::Type(..)
@@ -1438,16 +1420,14 @@ fn check_expr<'tcx>(this: &mut Liveness<'_, 'tcx>, expr: &'tcx Expr<'tcx>) {
 impl<'tcx> Liveness<'_, 'tcx> {
     fn check_place(&mut self, expr: &'tcx Expr<'tcx>) {
         match expr.kind {
-            hir::ExprKind::Path(hir::QPath::Resolved(_, ref path)) => {
-                if let Res::Local(var_hid) = path.res {
-                    // Assignment to an immutable variable or argument: only legal
-                    // if there is no later assignment. If this local is actually
-                    // mutable, then check for a reassignment to flag the mutability
-                    // as being used.
-                    let ln = self.live_node(expr.hir_id, expr.span);
-                    let var = self.variable(var_hid, expr.span);
-                    self.warn_about_dead_assign(vec![expr.span], expr.hir_id, ln, var);
-                }
+            hir::ExprKind::VarRef(var_hid, _) => {
+                // Assignment to an immutable variable or argument: only legal
+                // if there is no later assignment. If this local is actually
+                // mutable, then check for a reassignment to flag the mutability
+                // as being used.
+                let ln = self.live_node(expr.hir_id, expr.span);
+                let var = self.variable(var_hid, expr.span);
+                self.warn_about_dead_assign(vec![expr.span], expr.hir_id, ln, var);
             }
             _ => {
                 // For other kinds of places, no checks are required,

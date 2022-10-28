@@ -293,7 +293,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             ExprKind::Path(QPath::LangItem(lang_item, _, hir_id)) => {
                 self.check_lang_item_path(lang_item, expr, hir_id)
             }
-            ExprKind::Path(ref qpath) => self.check_expr_path(qpath, expr, &[]),
+            ExprKind::Path(_) => unreachable!(),
             ExprKind::InlineAsm(asm) => {
                 // We defer some asm checks as we may not have resolved the input and output types yet (they may still be infer vars).
                 self.deferred_asm_checks.borrow_mut().push((asm, expr.hir_id));
@@ -349,6 +349,12 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             }
             ExprKind::Field(base, field) => self.check_field(expr, &base, field),
             ExprKind::Index(base, idx) => self.check_expr_index(base, idx, expr),
+            ExprKind::VarRef(hid, _) => {
+                let ty = self.local_ty(expr.span, hid).decl_ty;
+                let ty = self.normalize_associated_types_in(expr.span, ty);
+                self.write_ty(expr.hir_id, ty);
+                ty
+            }
             ExprKind::Yield(value, ref src) => self.check_expr_yield(value, expr, src),
             hir::ExprKind::Err => tcx.ty_error(),
         }

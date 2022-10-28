@@ -104,14 +104,12 @@ impl<'tcx> LateLintPass<'tcx> for UnusedResults {
         let maybe_def_id = match expr.kind {
             hir::ExprKind::Call(ref callee, _) => {
                 match callee.kind {
-                    hir::ExprKind::Path(ref qpath) => {
-                        match cx.qpath_res(qpath, callee.hir_id) {
-                            Res::Def(DefKind::Fn | DefKind::AssocFn, def_id) => Some(def_id),
-                            // `Res::Local` if it was a closure, for which we
-                            // do not currently support must-use linting
-                            _ => None,
-                        }
-                    }
+                    hir::ExprKind::Path(ref qpath) => match cx.qpath_res(qpath, callee.hir_id) {
+                        Res::Def(DefKind::Fn | DefKind::AssocFn, def_id) => Some(def_id),
+                        _ => None,
+                    },
+                    // `ExprKind::VarRef` if it was a closure, for which we
+                    // do not currently support must-use linting
                     _ => None,
                 }
             }

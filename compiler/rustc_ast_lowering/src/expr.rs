@@ -220,14 +220,31 @@ impl<'hir> LoweringContext<'_, 'hir> {
                     hir::ExprKind::Err
                 }
                 ExprKind::Path(ref qself, ref path) => {
-                    let qpath = self.lower_qpath(
-                        e.id,
-                        qself,
-                        path,
-                        ParamMode::Optional,
-                        &ImplTraitContext::Disallowed(ImplTraitPosition::Path),
-                    );
-                    hir::ExprKind::Path(qpath)
+                    // We may fail to find a HirId when the Res points to a Local from an enclosing HIR owner.
+                    // This can happen when trying to lower the return type `x` in erroneous code like
+                    //   async fn foo(x: u8) -> x {}
+                    // In that case, `x` is lowered as a function parameter, and the return type is lowered as
+                    // an opaque type as a synthesized HIR owner.
+                    if qself.is_none()
+                        && let [PathSegment { id: _, ident, args: None }] = *path.segments
+                        && let Some(partial_res) = self.resolver.get_partial_res(e.id)
+                        && let Some(Res::Local(id)) = partial_res.full_res()
+                        && let Some(&local_id) = self.node_id_to_local_id.get(&id)
+                    {
+                        let owner = self.current_hir_id_owner;
+                        let var_id = hir::HirId { owner, local_id };
+                        let ident = self.lower_ident(ident);
+                        hir::ExprKind::VarRef(var_id, ident)
+                    } else {
+                        let qpath = self.lower_qpath(
+                            e.id,
+                            qself,
+                            path,
+                            ParamMode::Optional,
+                            &ImplTraitContext::Disallowed(ImplTraitPosition::Path),
+                        );
+                        hir::ExprKind::Path(qpath)
+                    }
                 }
                 ExprKind::Break(opt_label, ref opt_expr) => {
                     let opt_expr = opt_expr.as_ref().map(|x| self.lower_expr(x));
@@ -1806,18 +1823,8 @@ impl<'hir> LoweringContext<'_, 'hir> {
         binding: hir::HirId,
         attrs: AttrVec,
     ) -> hir::Expr<'hir> {
-        let hir_id = self.next_id();
-        let res = Res::Local(binding);
-        let expr_path = hir::ExprKind::Path(hir::QPath::Resolved(
-            None,
-            self.arena.alloc(hir::Path {
-                span: self.lower_span(span),
-                res,
-                segments: arena_vec![self; hir::PathSegment::new(ident, hir_id, res)],
-            }),
-        ));
-
-        self.expr(span, expr_path, attrs)
+        let kind = hir::ExprKind::VarRef(binding, ident);
+        self.expr(span, kind, attrs)
     }
 
     fn expr_unsafe(&mut self, expr: &'hir hir::Expr<'hir>) -> hir::Expr<'hir> {

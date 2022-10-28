@@ -1560,6 +1560,9 @@ impl<'a> State<'a> {
                     self.print_expr_maybe_paren(expr, parser::PREC_JUMP);
                 }
             }
+            hir::ExprKind::VarRef(_, ident) => {
+                self.print_ident(ident);
+            }
             hir::ExprKind::InlineAsm(asm) => {
                 self.word("asm!");
                 self.print_inline_asm(asm);

@@ -745,19 +745,7 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
 
     #[instrument(level = "trace", skip(self))]
     fn lower_res(&mut self, res: Res<NodeId>) -> Res {
-        let res: Result<Res, ()> = res.apply_id(|id| {
-            let owner = self.current_hir_id_owner;
-            let local_id = self.node_id_to_local_id.get(&id).copied().ok_or(())?;
-            Ok(hir::HirId { owner, local_id })
-        });
-        trace!(?res);
-
-        // We may fail to find a HirId when the Res points to a Local from an enclosing HIR owner.
-        // This can happen when trying to lower the return type `x` in erroneous code like
-        //   async fn foo(x: u8) -> x {}
-        // In that case, `x` is lowered as a function parameter, and the return type is lowered as
-        // an opaque type as a synthesized HIR owner.
-        res.unwrap_or(Res::Err)
+        res.expect_non_local()
     }
 
     fn expect_full_res(&mut self, id: NodeId) -> Res<NodeId> {

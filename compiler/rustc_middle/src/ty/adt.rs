@@ -18,6 +18,7 @@ use rustc_target::abi::VariantIdx;
 
 use std::cell::RefCell;
 use std::cmp::Ordering;
+use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::str;

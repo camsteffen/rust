@@ -1672,6 +1672,7 @@ impl Expr<'_> {
             ExprKind::InlineAsm(..) => ExprPrecedence::InlineAsm,
             ExprKind::Struct(..) => ExprPrecedence::Struct,
             ExprKind::Repeat(..) => ExprPrecedence::Repeat,
+            ExprKind::VarRef(..) => ExprPrecedence::Path,
             ExprKind::Yield(..) => ExprPrecedence::Yield,
             ExprKind::Err => ExprPrecedence::Err,
         }
@@ -1692,7 +1693,7 @@ impl Expr<'_> {
     pub fn is_place_expr(&self, mut allow_projections_from: impl FnMut(&Self) -> bool) -> bool {
         match self.kind {
             ExprKind::Path(QPath::Resolved(_, ref path)) => {
-                matches!(path.res, Res::Local(..) | Res::Def(DefKind::Static(_), _) | Res::Err)
+                matches!(path.res, Res::Def(DefKind::Static(_), _) | Res::Err)
             }
 
             // Type ascription inherits its place expression kind from its
@@ -1708,6 +1709,8 @@ impl Expr<'_> {
 
             // Lang item paths cannot currently be local variables or statics.
             ExprKind::Path(QPath::LangItem(..)) => false,
+
+            ExprKind::VarRef(..) => true,
 
             // Partially qualified paths in expressions can only legally
             // refer to associated items which are always rvalues.
@@ -1766,7 +1769,7 @@ impl Expr<'_> {
 
     pub fn can_have_side_effects(&self) -> bool {
         match self.peel_drop_temps().kind {
-            ExprKind::Path(_) | ExprKind::Lit(_) => false,
+            ExprKind::Path(_) | ExprKind::Lit(_) | ExprKind::VarRef(..) => false,
             ExprKind::Type(base, _)
             | ExprKind::Unary(_, base)
             | ExprKind::Field(base, _)
@@ -1985,6 +1988,9 @@ pub enum ExprKind<'hir> {
     /// E.g., `[1; 5]`. The first expression is the element
     /// to be repeated; the second is the number of times to repeat it.
     Repeat(&'hir Expr<'hir>, ArrayLen),
+
+    /// A variable reference e.g. `x`
+    VarRef(HirId, Ident),
 
     /// A suspension point for generators (i.e., `yield <expr>`).
     Yield(&'hir Expr<'hir>, YieldSource),

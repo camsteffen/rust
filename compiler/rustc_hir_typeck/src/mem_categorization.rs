@@ -356,6 +356,8 @@ impl<'a, 'tcx> MemCategorizationContext<'a, 'tcx> {
                 self.cat_res(expr.hir_id, expr.span, expr_ty, res)
             }
 
+            hir::ExprKind::VarRef(var_id, _) => self.cat_var(expr.hir_id, var_id),
+
             hir::ExprKind::Type(ref e, _) => self.cat_expr(e),
 
             hir::ExprKind::AddrOf(..)
@@ -413,15 +415,20 @@ impl<'a, 'tcx> MemCategorizationContext<'a, 'tcx> {
                 Ok(PlaceWithHirId::new(hir_id, expr_ty, PlaceBase::StaticItem, Vec::new()))
             }
 
-            Res::Local(var_id) => {
-                if self.upvars.map_or(false, |upvars| upvars.contains_key(&var_id)) {
-                    self.cat_upvar(hir_id, var_id)
-                } else {
-                    Ok(PlaceWithHirId::new(hir_id, expr_ty, PlaceBase::Local(var_id), Vec::new()))
-                }
-            }
-
             def => span_bug!(span, "unexpected definition in memory categorization: {:?}", def),
+        }
+    }
+
+    pub(crate) fn cat_var(
+        &self,
+        hir_id: hir::HirId,
+        var_id: hir::HirId,
+    ) -> McResult<PlaceWithHirId<'tcx>> {
+        if self.upvars.map_or(false, |upvars| upvars.contains_key(&var_id)) {
+            self.cat_upvar(hir_id, var_id)
+        } else {
+            let var_ty = self.node_ty(var_id)?;
+            Ok(PlaceWithHirId::new(hir_id, var_ty, PlaceBase::Local(var_id), Vec::new()))
         }
     }
 

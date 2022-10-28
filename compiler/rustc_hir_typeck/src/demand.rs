@@ -222,11 +222,8 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                             post_message = " type";
                         }
                     }
-                    hir::ExprKind::Path(hir::QPath::Resolved(
-                        None,
-                        hir::Path { res: hir::def::Res::Local(hir_id), .. },
-                    )) => {
-                        if let Some(hir::Node::Pat(pat)) = self.tcx.hir().find(*hir_id) {
+                    hir::ExprKind::VarRef(hir_id, _) => {
+                        if let Some(hir::Node::Pat(pat)) = self.tcx.hir().find(hir_id) {
                             let parent = self.tcx.hir().get_parent_node(pat.hir_id);
                             primary_span = pat.span;
                             secondary_span = pat.span;
@@ -585,11 +582,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     /// opt.map(|param| { takes_ref(param) });
     /// ```
     fn can_use_as_ref(&self, expr: &hir::Expr<'_>) -> Option<(Span, &'static str, String)> {
-        let hir::ExprKind::Path(hir::QPath::Resolved(_, ref path)) = expr.kind else {
-            return None;
-        };
-
-        let hir::def::Res::Local(local_id) = path.res else {
+        let hir::ExprKind::VarRef(local_id, _) = expr.kind else {
             return None;
         };
 
@@ -644,21 +637,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         expr: &hir::Expr<'_>,
     ) -> Option<Symbol> {
         let hir = self.tcx.hir();
-        let local = match expr {
-            hir::Expr {
-                kind:
-                    hir::ExprKind::Path(hir::QPath::Resolved(
-                        None,
-                        hir::Path {
-                            res: hir::def::Res::Local(_),
-                            segments: [hir::PathSegment { ident, .. }],
-                            ..
-                        },
-                    )),
-                ..
-            } => Some(ident),
-            _ => None,
-        }?;
+        let hir::ExprKind::VarRef(_, local) = expr.kind else { return None };
 
         match hir.find(hir.get_parent_node(expr.hir_id))? {
             Node::ExprField(field) => {

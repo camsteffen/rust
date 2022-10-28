@@ -17,7 +17,6 @@ use rustc_ast as ast;
 use rustc_ast::walk_list;
 use rustc_data_structures::fx::FxHashSet;
 use rustc_hir as hir;
-use rustc_hir::def::{DefKind as HirDefKind, Res};
 use rustc_hir::def_id::{DefId, LocalDefId, CRATE_DEF_ID};
 use rustc_hir::intravisit::{self, Visitor};
 use rustc_hir_pretty::{bounds_to_string, fn_to_string, generic_params_to_string, ty_to_string};
@@ -721,13 +720,6 @@ impl<'tcx> DumpVisitor<'tcx> {
         }
     }
 
-    fn dump_path_segment_ref(&mut self, id: hir::HirId, segment: &hir::PathSegment<'tcx>) {
-        let segment_data = self.save_ctxt.get_path_segment_data_with_id(segment, id);
-        if let Some(segment_data) = segment_data {
-            self.dumper.dump_ref(segment_data);
-        }
-    }
-
     fn process_path(&mut self, id: hir::HirId, path: &hir::QPath<'tcx>) {
         if self.span.filter_generated(path.span()) {
             return;
@@ -868,61 +860,40 @@ impl<'tcx> DumpVisitor<'tcx> {
 
         // Process collected paths.
         for (id, ident, _) in collector.collected_idents {
-            let res = self.save_ctxt.get_path_res(id);
-            match res {
-                Res::Local(hir_id) => {
-                    let typ = self
-                        .save_ctxt
-                        .typeck_results()
-                        .node_type_opt(hir_id)
-                        .map(|t| t.to_string())
-                        .unwrap_or_default();
+            let hir::Node::Pat(&hir::Pat { kind: hir::PatKind::Binding(_, hir_id, ..), .. }) = self.tcx.hir().get(id) else {
+                error!("expected binding");
+                continue;
+            };
+            let typ = self
+                .save_ctxt
+                .typeck_results()
+                .node_type_opt(hir_id)
+                .map(|t| t.to_string())
+                .unwrap_or_default();
 
-                    // Rust uses the id of the pattern for var lookups, so we'll use it too.
-                    if !self.span.filter_generated(ident.span) {
-                        let qualname = format!("{}${}", ident, hir_id);
-                        let id = id_from_hir_id(hir_id, &self.save_ctxt);
-                        let span = self.span_from_span(ident.span);
+            // Rust uses the id of the pattern for var lookups, so we'll use it too.
+            if !self.span.filter_generated(ident.span) {
+                let qualname = format!("{}${}", ident, hir_id);
+                let id = id_from_hir_id(hir_id, &self.save_ctxt);
+                let span = self.span_from_span(ident.span);
 
-                        self.dumper.dump_def(
-                            &Access { public: false, reachable: false },
-                            Def {
-                                kind: DefKind::Local,
-                                id,
-                                span,
-                                name: ident.to_string(),
-                                qualname,
-                                value: typ,
-                                parent: None,
-                                children: vec![],
-                                decl_id: None,
-                                docs: String::new(),
-                                sig: None,
-                                attributes: vec![],
-                            },
-                        );
-                    }
-                }
-                Res::Def(
-                    HirDefKind::Ctor(..)
-                    | HirDefKind::Const
-                    | HirDefKind::AssocConst
-                    | HirDefKind::Struct
-                    | HirDefKind::Variant
-                    | HirDefKind::TyAlias
-                    | HirDefKind::AssocTy,
-                    _,
-                )
-                | Res::SelfTyParam { .. }
-                | Res::SelfTyAlias { .. } => {
-                    self.dump_path_segment_ref(
+                self.dumper.dump_def(
+                    &Access { public: false, reachable: false },
+                    Def {
+                        kind: DefKind::Local,
                         id,
-                        &hir::PathSegment::new(ident, hir::HirId::INVALID, Res::Err),
-                    );
-                }
-                def => {
-                    error!("unexpected definition kind when processing collected idents: {:?}", def)
-                }
+                        span,
+                        name: ident.to_string(),
+                        qualname,
+                        value: typ,
+                        parent: None,
+                        children: vec![],
+                        decl_id: None,
+                        docs: String::new(),
+                        sig: None,
+                        attributes: vec![],
+                    },
+                );
             }
         }
 
@@ -1390,6 +1361,13 @@ impl<'tcx> Visitor<'tcx> for DumpVisitor<'tcx> {
                         .nest_typeck_results(self.tcx.hir().local_def_id(anon_const.hir_id), |v| {
                             v.visit_expr(&map.body(anon_const.body).value)
                         }),
+                }
+            }
+            hir::ExprKind::VarRef(id, ident) => {
+                if !self.span.filter_generated(ident.span) {
+                    let span = self.span_from_span(ident.span);
+                    let ref_id = id_from_hir_id(id, &self.save_ctxt);
+                    self.dumper.dump_ref(Ref { kind: RefKind::Variable, span, ref_id });
                 }
             }
             // In particular, we take this branch for call and path expressions,

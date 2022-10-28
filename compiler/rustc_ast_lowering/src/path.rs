@@ -35,7 +35,7 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
         let path_span_lo = p.span.shrink_to_lo();
         let proj_start = p.segments.len() - unresolved_segments;
         let path = self.arena.alloc(hir::Path {
-            res: self.lower_res(base_res),
+            res: base_res.map_local(|_| Res::Err),
             segments: self.arena.alloc_from_iter(p.segments[..proj_start].iter().enumerate().map(
                 |(i, segment)| {
                     let param_mode = match (qself_position, param_mode) {

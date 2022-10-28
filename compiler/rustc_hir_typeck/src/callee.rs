@@ -651,6 +651,14 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                     Res::Err
                 }
             }
+            // Emit a different diagnostic for local variables, as they are not
+            // type definitions themselves, but rather variables *of* that type.
+            hir::ExprKind::VarRef(hir_id, ident) => {
+                let span = self.tcx.hir().span(hir_id);
+                let label = format!("`{}` has type `{}`", ident, callee_ty);
+                err.span_label(span, label);
+                Res::Err
+            }
             _ => Res::Err,
         };
 
@@ -688,21 +696,12 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                     .span_to_snippet(path.span)
                     .ok()
                     .map(|p| format!("`{p}` defined here returns `{callee_ty}`")),
-                _ => {
-                    match def {
-                        // Emit a different diagnostic for local variables, as they are not
-                        // type definitions themselves, but rather variables *of* that type.
-                        Res::Local(hir_id) => Some(format!(
-                            "`{}` has type `{}`",
-                            self.tcx.hir().name(hir_id),
-                            callee_ty
-                        )),
-                        Res::Def(kind, def_id) if kind.ns() == Some(Namespace::ValueNS) => {
-                            Some(format!("`{}` defined here", self.tcx.def_path_str(def_id),))
-                        }
-                        _ => Some(format!("`{callee_ty}` defined here")),
+                _ => match def {
+                    Res::Def(kind, def_id) if kind.ns() == Some(Namespace::ValueNS) => {
+                        Some(format!("`{}` defined here", self.tcx.def_path_str(def_id),))
                     }
-                }
+                    _ => Some(format!("`{callee_ty}` defined here")),
+                },
             };
             if let Some(label) = label {
                 err.span_label(span, label);

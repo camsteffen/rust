@@ -158,15 +158,12 @@ impl<'a, 'tcx> DropRangeVisitor<'a, 'tcx> {
         // like `*a[i].x`, we want to find the `a` and mark that as
         // reinitialized.
         match expr.kind {
-            ExprKind::Path(hir::QPath::Resolved(
-                _,
-                hir::Path { res: hir::def::Res::Local(hir_id), .. },
-            )) => {
+            ExprKind::VarRef(hir_id, _) => {
                 // This is the base case, where we have found an actual named variable.
 
                 let location = self.expr_index;
                 debug!("reinitializing {:?} at {:?}", hir_id, location);
-                self.drop_ranges.reinit_at(TrackedValue::Variable(*hir_id), location);
+                self.drop_ranges.reinit_at(TrackedValue::Variable(hir_id), location);
             }
 
             ExprKind::Field(base, _) => self.reinit_expr(base),
@@ -460,6 +457,7 @@ impl<'a, 'tcx> Visitor<'tcx> for DropRangeVisitor<'a, 'tcx> {
             | ExprKind::Let(..)
             | ExprKind::Lit(..)
             | ExprKind::Path(..)
+            | ExprKind::VarRef(..)
             | ExprKind::Repeat(..)
             | ExprKind::Ret(..)
             | ExprKind::Struct(..)

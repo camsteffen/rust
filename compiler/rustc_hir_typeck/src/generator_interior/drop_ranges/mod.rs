@@ -81,17 +81,10 @@ pub fn compute_drop_ranges<'a, 'tcx>(
 /// as well as the HirId of the local `x` itself.
 fn for_each_consumable<'tcx>(hir: Map<'tcx>, place: TrackedValue, mut f: impl FnMut(TrackedValue)) {
     f(place);
-    let node = hir.find(place.hir_id());
-    if let Some(Node::Expr(expr)) = node {
-        match expr.kind {
-            hir::ExprKind::Path(hir::QPath::Resolved(
-                _,
-                hir::Path { res: hir::def::Res::Local(hir_id), .. },
-            )) => {
-                f(TrackedValue::Variable(*hir_id));
-            }
-            _ => (),
-        }
+    if let Some(Node::Expr(expr)) = hir.find(place.hir_id())
+        && let hir::ExprKind::VarRef(hir_id, _) = expr.kind
+    {
+        f(TrackedValue::Variable(hir_id));
     }
 }
 

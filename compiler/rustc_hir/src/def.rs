@@ -299,10 +299,11 @@ impl DefKind {
 /// - `s` will resolve to [`Res::Local`];
 /// - the call to `str_to_string` will resolve to [`Res::Def`], with the [`DefId`]
 ///   pointing to the definition of `str_to_string` in the current crate.
-//
+///
+/// `Res::Local` is replaced with `ExprKind::VarRef` when lowering AST to HIR.
 #[derive(Clone, Copy, PartialEq, Eq, Encodable, Decodable, Hash, Debug)]
 #[derive(HashStable_Generic)]
-pub enum Res<Id = hir::HirId> {
+pub enum Res<Id = !> {
     /// Definition having a unique ID (`DefId`), corresponds to something defined in user code.
     ///
     /// **Not bound to a specific namespace.**
@@ -663,12 +664,12 @@ impl<Id> Res<Id> {
         }
     }
 
-    pub fn map_id<R>(self, mut map: impl FnMut(Id) -> R) -> Res<R> {
+    pub fn map_local<R>(self, mut map: impl FnMut(Id) -> Res<R>) -> Res<R> {
         match self {
             Res::Def(kind, id) => Res::Def(kind, id),
             Res::SelfCtor(id) => Res::SelfCtor(id),
             Res::PrimTy(id) => Res::PrimTy(id),
-            Res::Local(id) => Res::Local(map(id)),
+            Res::Local(id) => map(id),
             Res::SelfTyParam { trait_ } => Res::SelfTyParam { trait_ },
             Res::SelfTyAlias { alias_to, forbid_generic, is_trait_impl } => {
                 Res::SelfTyAlias { alias_to, forbid_generic, is_trait_impl }
@@ -679,25 +680,9 @@ impl<Id> Res<Id> {
         }
     }
 
-    pub fn apply_id<R, E>(self, mut map: impl FnMut(Id) -> Result<R, E>) -> Result<Res<R>, E> {
-        Ok(match self {
-            Res::Def(kind, id) => Res::Def(kind, id),
-            Res::SelfCtor(id) => Res::SelfCtor(id),
-            Res::PrimTy(id) => Res::PrimTy(id),
-            Res::Local(id) => Res::Local(map(id)?),
-            Res::SelfTyParam { trait_ } => Res::SelfTyParam { trait_ },
-            Res::SelfTyAlias { alias_to, forbid_generic, is_trait_impl } => {
-                Res::SelfTyAlias { alias_to, forbid_generic, is_trait_impl }
-            }
-            Res::ToolMod => Res::ToolMod,
-            Res::NonMacroAttr(attr_kind) => Res::NonMacroAttr(attr_kind),
-            Res::Err => Res::Err,
-        })
-    }
-
     #[track_caller]
     pub fn expect_non_local<OtherId>(self) -> Res<OtherId> {
-        self.map_id(
+        self.map_local(
             #[track_caller]
             |_| panic!("unexpected `Res::Local`"),
         )

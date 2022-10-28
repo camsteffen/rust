@@ -1362,41 +1362,38 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                         Applicability::MaybeIncorrect,
                     );
                 }
-                ExprKind::Path(QPath::Resolved(_, path)) => {
-                    // local binding
-                    if let hir::def::Res::Local(hir_id) = path.res {
-                        let span = tcx.hir().span(hir_id);
-                        let filename = tcx.sess.source_map().span_to_filename(span);
+                ExprKind::VarRef(hir_id, _) => {
+                    let span = tcx.hir().span(hir_id);
+                    let filename = tcx.sess.source_map().span_to_filename(span);
 
-                        let parent_node =
-                            self.tcx.hir().get(self.tcx.hir().get_parent_node(hir_id));
-                        let msg = format!(
-                            "you must specify a type for this binding, like `{}`",
-                            concrete_type,
-                        );
+                    let parent_node =
+                        self.tcx.hir().get(self.tcx.hir().get_parent_node(hir_id));
+                    let msg = format!(
+                        "you must specify a type for this binding, like `{}`",
+                        concrete_type,
+                    );
 
-                        match (filename, parent_node) {
-                            (
-                                FileName::Real(_),
-                                Node::Local(hir::Local {
-                                    source: hir::LocalSource::Normal,
-                                    ty,
-                                    ..
-                                }),
-                            ) => {
-                                let type_span = ty.map(|ty| ty.span.with_lo(span.hi())).unwrap_or(span.shrink_to_hi());
-                                err.span_suggestion(
-                                    // account for `let x: _ = 42;`
-                                    //                   ^^^
-                                    type_span,
-                                    &msg,
-                                    format!(": {concrete_type}"),
-                                    Applicability::MaybeIncorrect,
-                                );
-                            }
-                            _ => {
-                                err.span_label(span, msg);
-                            }
+                    match (filename, parent_node) {
+                        (
+                            FileName::Real(_),
+                            Node::Local(hir::Local {
+                                source: hir::LocalSource::Normal,
+                                ty,
+                                ..
+                            }),
+                        ) => {
+                            let type_span = ty.map(|ty| ty.span.with_lo(span.hi())).unwrap_or(span.shrink_to_hi());
+                            err.span_suggestion(
+                                // account for `let x: _ = 42;`
+                                //                   ^^^
+                                type_span,
+                                &msg,
+                                format!(": {concrete_type}"),
+                                Applicability::MaybeIncorrect,
+                            );
+                        }
+                        _ => {
+                            err.span_label(span, msg);
                         }
                     }
                 }

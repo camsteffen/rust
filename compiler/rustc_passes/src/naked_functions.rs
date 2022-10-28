@@ -110,12 +110,8 @@ struct CheckParameters<'tcx> {
 
 impl<'tcx> Visitor<'tcx> for CheckParameters<'tcx> {
     fn visit_expr(&mut self, expr: &'tcx hir::Expr<'tcx>) {
-        if let hir::ExprKind::Path(hir::QPath::Resolved(
-            _,
-            hir::Path { res: hir::def::Res::Local(var_hir_id), .. },
-        )) = expr.kind
-        {
-            if self.params.contains(var_hir_id) {
+        if let ExprKind::VarRef(var_hir_id, _) = expr.kind {
+            if self.params.contains(&var_hir_id) {
                 self.tcx.sess.emit_err(ParamsNotAllowed { span: expr.span });
                 return;
             }
@@ -199,6 +195,7 @@ impl<'tcx> CheckInlineAssembly<'tcx> {
             | ExprKind::Field(..)
             | ExprKind::Index(..)
             | ExprKind::Path(..)
+            | ExprKind::VarRef(..)
             | ExprKind::AddrOf(..)
             | ExprKind::Let(..)
             | ExprKind::Break(..)
