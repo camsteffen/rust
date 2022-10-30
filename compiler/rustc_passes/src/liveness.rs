@@ -1103,18 +1103,11 @@ impl<'a, 'tcx> Liveness<'a, 'tcx> {
                         hir::InlineAsmOperand::In { expr, .. } => {
                             succ = self.propagate_through_expr(expr, succ)
                         }
-                        hir::InlineAsmOperand::Out { expr, .. } => {
-                            if let Some(expr) = expr {
-                                succ = self.propagate_through_place_components(expr, succ);
-                            }
-                        }
+                        hir::InlineAsmOperand::Out { .. } => {}
                         hir::InlineAsmOperand::InOut { expr, .. } => {
                             succ = self.propagate_through_place_components(expr, succ);
                         }
-                        hir::InlineAsmOperand::SplitInOut { in_expr, out_expr, .. } => {
-                            if let Some(expr) = out_expr {
-                                succ = self.propagate_through_place_components(expr, succ);
-                            }
+                        hir::InlineAsmOperand::SplitInOut { in_expr, .. } => {
                             succ = self.propagate_through_expr(in_expr, succ);
                         }
                         hir::InlineAsmOperand::Const { .. }
