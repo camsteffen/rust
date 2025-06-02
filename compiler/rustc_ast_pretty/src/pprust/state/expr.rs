@@ -437,19 +437,6 @@ impl<'a> State<'a> {
                 self.word_space("as");
                 self.print_type(ty);
             }
-            ast::ExprKind::Type(expr, ty) => {
-                self.word("builtin # type_ascribe");
-                self.popen();
-                let ib = self.ibox(0);
-                self.print_expr(expr, FixupContext::default());
-
-                self.word(",");
-                self.space_if_not_bol();
-                self.print_type(ty);
-
-                self.end(ib);
-                self.pclose();
-            }
             ast::ExprKind::Let(pat, scrutinee, _, _) => {
                 self.print_let(pat, scrutinee, fixup);
             }

@@ -1187,10 +1187,6 @@ pub fn walk_expr<T: MutVisitor>(vis: &mut T, Expr { kind, id, span, attrs, token
             vis.visit_expr(expr);
             vis.visit_ty(ty);
         }
-        ExprKind::Type(expr, ty) => {
-            vis.visit_expr(expr);
-            vis.visit_ty(ty);
-        }
         ExprKind::AddrOf(_kind, _mut, ohs) => vis.visit_expr(ohs),
         ExprKind::Let(pat, scrutinee, span, _recovered) => {
             vis.visit_pat(pat);

@@ -2,7 +2,7 @@
 #![allow(unused_assignments)]
 #![allow(dead_code)]
 #![deny(unreachable_code)]
-#![feature(never_type, type_ascription)]
+#![feature(never_type)]
 
 fn a() {
     // the cast is unreachable:

@@ -99,13 +99,6 @@ pub use crate::macros::builtin::cfg_accessible;
 pub use crate::macros::builtin::cfg_eval;
 
 #[unstable(
-    feature = "type_ascription",
-    issue = "23416",
-    reason = "placeholder syntax for type ascription"
-)]
-pub use crate::macros::builtin::type_ascribe;
-
-#[unstable(
     feature = "deref_patterns",
     issue = "87121",
     reason = "placeholder syntax for deref patterns"

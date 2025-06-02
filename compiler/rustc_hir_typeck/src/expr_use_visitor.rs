@@ -393,10 +393,6 @@ impl<'tcx, Cx: TypeInformationCtxt<'tcx>, D: Delegate<'tcx>> ExprUseVisitor<'tcx
         match expr.kind {
             hir::ExprKind::Path(_) => {}
 
-            hir::ExprKind::Type(subexpr, _) => {
-                self.walk_expr(subexpr)?;
-            }
-
             hir::ExprKind::UnsafeBinderCast(_, subexpr, _) => {
                 self.walk_expr(subexpr)?;
             }
@@ -1393,9 +1389,6 @@ impl<'tcx, Cx: TypeInformationCtxt<'tcx>, D: Delegate<'tcx>> ExprUseVisitor<'tcx
                 let res = self.cx.typeck_results().qpath_res(qpath, expr.hir_id);
                 self.cat_res(expr.hir_id, expr.span, expr_ty, res)
             }
-
-            // type ascription doesn't affect the place-ness of the subexpression.
-            hir::ExprKind::Type(e, _) => self.cat_expr(e),
 
             hir::ExprKind::UnsafeBinderCast(UnsafeBinderCastKind::Unwrap, e, _) => {
                 let base = self.cat_expr(e)?;

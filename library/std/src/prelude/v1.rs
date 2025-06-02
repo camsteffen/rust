@@ -89,14 +89,6 @@ pub use core::prelude::v1::cfg_eval;
 
 // Do not `doc(no_inline)` either.
 #[unstable(
-    feature = "type_ascription",
-    issue = "23416",
-    reason = "placeholder syntax for type ascription"
-)]
-pub use core::prelude::v1::type_ascribe;
-
-// Do not `doc(no_inline)` either.
-#[unstable(
     feature = "deref_patterns",
     issue = "87121",
     reason = "placeholder syntax for deref patterns"

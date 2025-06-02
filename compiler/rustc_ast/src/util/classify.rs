@@ -148,7 +148,6 @@ pub fn leading_labeled_expr(mut expr: &ast::Expr) -> bool {
             | Struct(..)
             | TryBlock(..)
             | Tup(..)
-            | Type(..)
             | Unary(..)
             | Underscore
             | Yeet(..)
@@ -225,7 +224,6 @@ pub fn expr_trailing_brace(mut expr: &ast::Expr) -> Option<TrailingBrace<'_>> {
             | MethodCall(_)
             | Tup(_)
             | Lit(_)
-            | Type(_, _)
             | Await(_, _)
             | Use(_, _)
             | Field(_, _)

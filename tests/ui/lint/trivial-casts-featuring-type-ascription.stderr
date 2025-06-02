@@ -1,5 +1,5 @@
 error: trivial numeric cast: `i32` as `i32`
-  --> $DIR/trivial-casts-featuring-type-ascription.rs:5:22
+  --> $DIR/trivial-casts-featuring-type-ascription.rs:4:22
    |
 LL |     let lugubrious = 12i32 as i32;
    |                      ^^^^^^^^^^^^
@@ -12,7 +12,7 @@ LL | #![deny(trivial_casts, trivial_numeric_casts)]
    |                        ^^^^^^^^^^^^^^^^^^^^^
 
 error: trivial cast: `&u32` as `*const u32`
-  --> $DIR/trivial-casts-featuring-type-ascription.rs:8:13
+  --> $DIR/trivial-casts-featuring-type-ascription.rs:7:13
    |
 LL |     let _ = haunted as *const u32;
    |             ^^^^^^^^^^^^^^^^^^^^^

@@ -141,9 +141,6 @@ mod expressions {
     /// ExprKind::Cast
     fn expr_cast() { let expr; expr as T; expr as T<u8>; }
 
-    /// ExprKind::Type
-    fn expr_type() { let expr; type_ascribe!(expr, T); }
-
     /// ExprKind::Let
     fn expr_let() {
         let b;

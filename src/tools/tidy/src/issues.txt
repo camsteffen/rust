@@ -45,7 +45,6 @@ ui/associated-consts/issue-63496.rs
 ui/associated-consts/issue-69020-assoc-const-arith-overflow.rs
 ui/associated-consts/issue-88599-ref-self.rs
 ui/associated-consts/issue-93775.rs
-ui/associated-consts/issue-93835.rs
 ui/associated-inherent-types/issue-104260.rs
 ui/associated-inherent-types/issue-109071.rs
 ui/associated-inherent-types/issue-109299-1.rs
@@ -456,7 +455,6 @@ ui/closures/issue-868.rs
 ui/closures/issue-87461.rs
 ui/closures/issue-87814-1.rs
 ui/closures/issue-87814-2.rs
-ui/closures/issue-90871.rs
 ui/closures/issue-97607.rs
 ui/closures/issue-99565.rs
 ui/codegen/auxiliary/issue-97708-aux.rs
@@ -957,7 +955,6 @@ ui/enum/issue-23304-1.rs
 ui/enum/issue-23304-2.rs
 ui/enum/issue-42747.rs
 ui/enum/issue-67945-1.rs
-ui/enum/issue-67945-2.rs
 ui/error-codes/e0119/auxiliary/issue-23563-a.rs
 ui/error-codes/e0119/issue-23563.rs
 ui/error-codes/e0119/issue-27403.rs
@@ -4212,7 +4209,6 @@ ui/typeck/issue-90319.rs
 ui/typeck/issue-90483-inaccessible-field-adjustment.rs
 ui/typeck/issue-90804-incorrect-reference-suggestion.rs
 ui/typeck/issue-91210-ptr-method.rs
-ui/typeck/issue-91267.rs
 ui/typeck/issue-91328.rs
 ui/typeck/issue-91334.rs
 ui/typeck/issue-91450-inner-ty-error.rs

@@ -40,7 +40,6 @@ impl Category {
             | ExprKind::Index { .. }
             | ExprKind::UpvarRef { .. }
             | ExprKind::VarRef { .. }
-            | ExprKind::PlaceTypeAscription { .. }
             | ExprKind::ValueTypeAscription { .. }
             | ExprKind::PlaceUnwrapUnsafeBinder { .. }
             | ExprKind::ValueUnwrapUnsafeBinder { .. } => Some(Category::Place),

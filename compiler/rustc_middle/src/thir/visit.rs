@@ -134,8 +134,7 @@ pub fn walk_expr<'thir, 'tcx: 'thir, V: Visitor<'thir, 'tcx>>(
                 visitor.visit_expr(&visitor.thir()[base.base]);
             }
         }
-        PlaceTypeAscription { source, user_ty: _, user_ty_span: _ }
-        | ValueTypeAscription { source, user_ty: _, user_ty_span: _ } => {
+        ValueTypeAscription { source, user_ty: _, user_ty_span: _ } => {
             visitor.visit_expr(&visitor.thir()[source])
         }
         PlaceUnwrapUnsafeBinder { source }

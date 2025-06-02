@@ -1952,7 +1952,6 @@ impl<'a> Parser<'a> {
         self.parse_builtin(|this, lo, ident| {
             Ok(match ident.name {
                 sym::offset_of => Some(this.parse_expr_offset_of(lo)?),
-                sym::type_ascribe => Some(this.parse_expr_type_ascribe(lo)?),
                 sym::wrap_binder => {
                     Some(this.parse_expr_unsafe_binder_cast(lo, UnsafeBinderCastKind::Wrap)?)
                 }
@@ -2021,15 +2020,6 @@ impl<'a> Parser<'a> {
 
         let span = lo.to(self.token.span);
         Ok(self.mk_expr(span, ExprKind::OffsetOf(container, fields)))
-    }
-
-    /// Built-in macro for type ascription expressions.
-    pub(crate) fn parse_expr_type_ascribe(&mut self, lo: Span) -> PResult<'a, P<Expr>> {
-        let expr = self.parse_expr()?;
-        self.expect(exp!(Comma))?;
-        let ty = self.parse_ty()?;
-        let span = lo.to(self.token.span);
-        Ok(self.mk_expr(span, ExprKind::Type(expr, ty)))
     }
 
     pub(crate) fn parse_expr_unsafe_binder_cast(
@@ -4173,9 +4163,7 @@ impl MutVisitor for CondChecker<'_> {
                 mut_visit::walk_expr(self, e);
                 self.forbid_let_reason = forbid_let_reason;
             }
-            ExprKind::Cast(ref mut op, _)
-            | ExprKind::Type(ref mut op, _)
-            | ExprKind::UnsafeBinderCast(_, ref mut op, _) => {
+            ExprKind::Cast(ref mut op, _) | ExprKind::UnsafeBinderCast(_, ref mut op, _) => {
                 let forbid_let_reason = self.forbid_let_reason;
                 self.forbid_let_reason = Some(OtherForbidden);
                 self.visit_expr(op);

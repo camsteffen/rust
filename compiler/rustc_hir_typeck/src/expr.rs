@@ -337,7 +337,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
                     // Place-preserving expressions only constitute reads if their
                     // parent expression constitutes a read.
-                    ExprKind::Type(..) | ExprKind::UnsafeBinderCast(..) => {
+                    ExprKind::UnsafeBinderCast(..) => {
                         self.expr_guaranteed_to_constitute_read_for_never(expr)
                     }
 
@@ -550,12 +550,6 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 self.check_expr_method_call(expr, segment, receiver, args, expected)
             }
             ExprKind::Cast(e, t) => self.check_expr_cast(e, t, expr),
-            ExprKind::Type(e, t) => {
-                let ascribed_ty = self.lower_ty_saving_user_provided_ty(t);
-                let ty = self.check_expr_with_hint(e, ascribed_ty);
-                self.demand_eqtype(e.span, ascribed_ty, ty);
-                ascribed_ty
-            }
             ExprKind::If(cond, then_expr, opt_else_expr) => {
                 self.check_expr_if(cond, then_expr, opt_else_expr, expr.span, expected)
             }

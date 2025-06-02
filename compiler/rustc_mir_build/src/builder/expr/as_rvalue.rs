@@ -551,7 +551,6 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
             | ExprKind::Return { .. }
             | ExprKind::Become { .. }
             | ExprKind::InlineAsm { .. }
-            | ExprKind::PlaceTypeAscription { .. }
             | ExprKind::ValueTypeAscription { .. }
             | ExprKind::PlaceUnwrapUnsafeBinder { .. }
             | ExprKind::ValueUnwrapUnsafeBinder { .. } => {

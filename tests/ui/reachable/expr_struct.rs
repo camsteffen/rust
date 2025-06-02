@@ -2,7 +2,6 @@
 #![allow(unused_assignments)]
 #![allow(dead_code)]
 #![deny(unreachable_code)]
-#![feature(type_ascription)]
 
 struct Foo {
     a: usize,

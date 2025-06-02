@@ -442,7 +442,6 @@ impl<'a, 'tcx> Visitor<'a, 'tcx> for UnsafetyVisitor<'a, 'tcx> {
             | ExprKind::Deref { .. }
             | ExprKind::Index { .. }
             | ExprKind::NeverToAny { .. }
-            | ExprKind::PlaceTypeAscription { .. }
             | ExprKind::ValueTypeAscription { .. }
             | ExprKind::PlaceUnwrapUnsafeBinder { .. }
             | ExprKind::ValueUnwrapUnsafeBinder { .. }

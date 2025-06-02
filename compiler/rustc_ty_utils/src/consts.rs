@@ -109,8 +109,7 @@ fn recurse_build<'tcx>(
     Ok(match &node.kind {
         // I dont know if handling of these 3 is correct
         &ExprKind::Scope { value, .. } => recurse_build(tcx, body, value, root_span)?,
-        &ExprKind::PlaceTypeAscription { source, .. }
-        | &ExprKind::ValueTypeAscription { source, .. } => {
+        &ExprKind::ValueTypeAscription { source, .. } => {
             recurse_build(tcx, body, source, root_span)?
         }
         &ExprKind::PlaceUnwrapUnsafeBinder { .. }
@@ -347,7 +346,6 @@ impl<'a, 'tcx> IsThirPolymorphic<'a, 'tcx> {
             | thir::ExprKind::Array { .. }
             | thir::ExprKind::Tuple { .. }
             | thir::ExprKind::Adt(_)
-            | thir::ExprKind::PlaceTypeAscription { .. }
             | thir::ExprKind::ValueTypeAscription { .. }
             | thir::ExprKind::PlaceUnwrapUnsafeBinder { .. }
             | thir::ExprKind::ValueUnwrapUnsafeBinder { .. }

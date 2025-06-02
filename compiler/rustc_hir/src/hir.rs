@@ -2326,7 +2326,6 @@ impl Expr<'_> {
             | ExprKind::Repeat(..)
             | ExprKind::Struct(..)
             | ExprKind::Tup(_)
-            | ExprKind::Type(..)
             | ExprKind::UnsafeBinderCast(..)
             | ExprKind::Use(..)
             | ExprKind::Err(_) => ExprPrecedence::Unambiguous,
@@ -2352,11 +2351,6 @@ impl Expr<'_> {
             ExprKind::Path(QPath::Resolved(_, ref path)) => {
                 matches!(path.res, Res::Local(..) | Res::Def(DefKind::Static { .. }, _) | Res::Err)
             }
-
-            // Type ascription inherits its place expression kind from its
-            // operand. See:
-            // https://github.com/rust-lang/rfcs/blob/master/text/0803-type-ascription.md#type-ascription-and-temporaries
-            ExprKind::Type(ref e, _) => e.is_place_expr(allow_projections_from),
 
             // Unsafe binder cast preserves place-ness of the sub-expression.
             ExprKind::UnsafeBinderCast(_, e, _) => e.is_place_expr(allow_projections_from),
@@ -2452,8 +2446,7 @@ impl Expr<'_> {
             ExprKind::Path(_) | ExprKind::Lit(_) | ExprKind::OffsetOf(..) | ExprKind::Use(..) => {
                 false
             }
-            ExprKind::Type(base, _)
-            | ExprKind::Unary(_, base)
+            ExprKind::Unary(_, base)
             | ExprKind::Field(base, _)
             | ExprKind::Index(base, _, _)
             | ExprKind::AddrOf(.., base)
@@ -2725,8 +2718,6 @@ pub enum ExprKind<'hir> {
     Lit(&'hir Lit),
     /// A cast (e.g., `foo as f64`).
     Cast(&'hir Expr<'hir>, &'hir Ty<'hir>),
-    /// A type ascription (e.g., `x: Foo`). See RFC 3307.
-    Type(&'hir Expr<'hir>, &'hir Ty<'hir>),
     /// Wraps the expression in a terminating scope.
     /// This makes it semantically equivalent to `{ let _t = expr; _t }`.
     ///

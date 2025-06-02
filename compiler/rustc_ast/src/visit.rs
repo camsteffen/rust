@@ -1366,7 +1366,7 @@ pub fn walk_expr<'a, V: Visitor<'a>>(visitor: &mut V, expression: &'a Expr) -> V
         ExprKind::Unary(_op, subexpression) => {
             try_visit!(visitor.visit_expr(subexpression));
         }
-        ExprKind::Cast(subexpression, typ) | ExprKind::Type(subexpression, typ) => {
+        ExprKind::Cast(subexpression, typ) => {
             try_visit!(visitor.visit_expr(subexpression));
             try_visit!(visitor.visit_ty(typ));
         }

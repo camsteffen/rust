@@ -1782,18 +1782,6 @@ pub(crate) mod builtin {
         /* compiler built-in */
     }
 
-    /// Unstable placeholder for type ascription.
-    #[allow_internal_unstable(builtin_syntax)]
-    #[unstable(
-        feature = "type_ascription",
-        issue = "23416",
-        reason = "placeholder syntax for type ascription"
-    )]
-    #[rustfmt::skip]
-    pub macro type_ascribe($expr:expr, $ty:ty) {
-        builtin # type_ascribe($expr, $ty)
-    }
-
     /// Unstable placeholder for deref patterns.
     #[allow_internal_unstable(builtin_syntax)]
     #[unstable(

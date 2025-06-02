@@ -891,25 +891,6 @@ impl<'tcx> ThirBuildCx<'tcx> {
                     cast
                 }
             }
-            hir::ExprKind::Type(source, ty) => {
-                let user_provided_types = self.typeck_results.user_provided_types();
-                let user_ty = user_provided_types.get(ty.hir_id).copied().map(Box::new);
-                debug!("make_mirror_unadjusted: (type) user_ty={:?}", user_ty);
-                let mirrored = self.mirror_expr(source);
-                if source.is_syntactic_place_expr() {
-                    ExprKind::PlaceTypeAscription {
-                        source: mirrored,
-                        user_ty,
-                        user_ty_span: ty.span,
-                    }
-                } else {
-                    ExprKind::ValueTypeAscription {
-                        source: mirrored,
-                        user_ty,
-                        user_ty_span: ty.span,
-                    }
-                }
-            }
 
             hir::ExprKind::UnsafeBinderCast(UnsafeBinderCastKind::Unwrap, source, _ty) => {
                 // FIXME(unsafe_binders): Take into account the ascribed type, too.

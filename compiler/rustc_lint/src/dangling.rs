@@ -196,8 +196,7 @@ fn is_temporary_rvalue(expr: &Expr<'_>) -> bool {
 
         ExprKind::UnsafeBinderCast(..) => false,
 
-        // Not applicable
-        ExprKind::Type(..) | ExprKind::Err(..) => false,
+        ExprKind::Err(..) => false,
     }
 }
 

@@ -1,6 +1,5 @@
 //@ edition:2018
 #![crate_type = "lib"]
-#![feature(type_ascription)]
 use std::future::Future;
 use std::pin::Pin;
 

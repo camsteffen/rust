@@ -4972,9 +4972,6 @@ impl<'a, 'ast, 'ra: 'ast, 'tcx> LateResolutionVisitor<'a, 'ast, 'ra, 'tcx> {
                     }
                 }
             }
-            ExprKind::Type(ref _type_expr, ref _ty) => {
-                visit::walk_expr(self, expr);
-            }
             // For closures, RibKind::FnOrCoroutine is added in visit_fn
             ExprKind::Closure(box ast::Closure {
                 binder: ClosureBinder::For { ref generic_params, span },

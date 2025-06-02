@@ -612,7 +612,6 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
             // Avoid creating a temporary
             ExprKind::VarRef { .. }
             | ExprKind::UpvarRef { .. }
-            | ExprKind::PlaceTypeAscription { .. }
             | ExprKind::ValueTypeAscription { .. }
             | ExprKind::PlaceUnwrapUnsafeBinder { .. }
             | ExprKind::ValueUnwrapUnsafeBinder { .. } => {

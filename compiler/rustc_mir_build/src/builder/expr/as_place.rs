@@ -473,36 +473,6 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                 block.and(place_builder)
             }
 
-            ExprKind::PlaceTypeAscription { source, ref user_ty, user_ty_span } => {
-                let place_builder = unpack!(
-                    block = this.expr_as_place(block, source, mutability, fake_borrow_temps,)
-                );
-                if let Some(user_ty) = user_ty {
-                    let ty_source_info = this.source_info(user_ty_span);
-                    let annotation_index =
-                        this.canonical_user_type_annotations.push(CanonicalUserTypeAnnotation {
-                            span: user_ty_span,
-                            user_ty: user_ty.clone(),
-                            inferred_ty: expr.ty,
-                        });
-
-                    let place = place_builder.to_place(this);
-                    this.cfg.push(
-                        block,
-                        Statement {
-                            source_info: ty_source_info,
-                            kind: StatementKind::AscribeUserType(
-                                Box::new((
-                                    place,
-                                    UserTypeProjection { base: annotation_index, projs: vec![] },
-                                )),
-                                Variance::Invariant,
-                            ),
-                        },
-                    );
-                }
-                block.and(place_builder)
-            }
             ExprKind::ValueTypeAscription { source, ref user_ty, user_ty_span } => {
                 let source_expr = &this.thir[source];
                 let temp = unpack!(

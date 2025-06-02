@@ -10,8 +10,6 @@
 
 // See also RFC 1445
 
-#![feature(type_ascription)]
-
 #[derive(Copy, Clone, Debug)]
 struct NoPartialEq;
 
@@ -26,12 +24,10 @@ struct NoDerive;
 //~| NOTE must be annotated with `#[derive(PartialEq)]`
 //~| NOTE must be annotated with `#[derive(PartialEq)]`
 //~| NOTE must be annotated with `#[derive(PartialEq)]`
-//~| NOTE must be annotated with `#[derive(PartialEq)]`
 
 // This impl makes `NoDerive` irreflexive.
 impl PartialEq for NoDerive { fn eq(&self, _: &Self) -> bool { false } }
 //~^ NOTE StructuralPartialEq.html for details
-//~| NOTE StructuralPartialEq.html for details
 //~| NOTE StructuralPartialEq.html for details
 //~| NOTE StructuralPartialEq.html for details
 //~| NOTE StructuralPartialEq.html for details
@@ -74,11 +70,6 @@ fn main() {
 
     const TUPLE: (OND, OND) = (None, Some(NoDerive)); //~ NOTE constant defined here
     match (None, Some(NoDerive)) { TUPLE => dbg!(TUPLE), _ => panic!("whoops"), };
-    //~^ ERROR constant of non-structural type `NoDerive` in a pattern
-    //~| NOTE constant of non-structural type
-
-    const TYPE_ASCRIPTION: OND = type_ascribe!(Some(NoDerive), OND); //~ NOTE constant defined here
-    match Some(NoDerive) { TYPE_ASCRIPTION => dbg!(TYPE_ASCRIPTION), _ => panic!("whoops"), };
     //~^ ERROR constant of non-structural type `NoDerive` in a pattern
     //~| NOTE constant of non-structural type
 

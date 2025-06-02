@@ -1,5 +1,4 @@
 #![deny(trivial_casts, trivial_numeric_casts)]
-#![feature(type_ascription)]
 
 fn main() {
     let lugubrious = 12i32 as i32;

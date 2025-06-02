@@ -1488,18 +1488,6 @@ impl<'a> State<'a> {
                 self.word_space("as");
                 self.print_type(ty);
             }
-            hir::ExprKind::Type(expr, ty) => {
-                self.word("type_ascribe!(");
-                let ib = self.ibox(0);
-                self.print_expr(expr);
-
-                self.word(",");
-                self.space_if_not_bol();
-                self.print_type(ty);
-
-                self.end(ib);
-                self.word(")");
-            }
             hir::ExprKind::DropTemps(init) => {
                 // Print `{`:
                 let cb = self.cbox(0);
@@ -2592,7 +2580,6 @@ fn contains_exterior_struct_lit(value: &hir::Expr<'_>) -> bool {
         }
         hir::ExprKind::Unary(_, x)
         | hir::ExprKind::Cast(x, _)
-        | hir::ExprKind::Type(x, _)
         | hir::ExprKind::Field(x, _)
         | hir::ExprKind::Index(x, _, _) => {
             // `&X { y: 1 }, X { y: 1 }.y`

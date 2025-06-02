@@ -17,7 +17,6 @@
 #![feature(round_char_boundary)]
 #![feature(test)]
 #![feature(type_alias_impl_trait)]
-#![feature(type_ascription)]
 #![recursion_limit = "256"]
 #![warn(rustc::internal)]
 #![allow(clippy::collapsible_if, clippy::collapsible_else_if)]

@@ -1,11 +1,6 @@
 // Here we check that type ascription is syntactically invalid when
 // not in the top position of an ascribing `let` binding or function parameter.
 
-
-// This has no effect.
-// We include it to demonstrate that this is the case:
-#![feature(type_ascription)]
-
 fn main() {}
 
 fn _ok() {

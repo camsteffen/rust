@@ -324,7 +324,6 @@ impl<'p, 'tcx> MatchVisitor<'p, 'tcx> {
             | Cast { source }
             | Use { source }
             | PointerCoercion { source, .. }
-            | PlaceTypeAscription { source, .. }
             | ValueTypeAscription { source, .. }
             | PlaceUnwrapUnsafeBinder { source }
             | ValueUnwrapUnsafeBinder { source }

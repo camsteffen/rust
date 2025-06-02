@@ -158,12 +158,6 @@ impl<'hir> LoweringContext<'_, 'hir> {
                         self.lower_ty(ty, ImplTraitContext::Disallowed(ImplTraitPosition::Cast));
                     hir::ExprKind::Cast(expr, ty)
                 }
-                ExprKind::Type(expr, ty) => {
-                    let expr = self.lower_expr(expr);
-                    let ty =
-                        self.lower_ty(ty, ImplTraitContext::Disallowed(ImplTraitPosition::Cast));
-                    hir::ExprKind::Type(expr, ty)
-                }
                 ExprKind::AddrOf(k, m, ohs) => {
                     let ohs = self.lower_expr(ohs);
                     hir::ExprKind::AddrOf(*k, *m, ohs)

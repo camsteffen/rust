@@ -143,12 +143,6 @@ mod expressions {
         expr as T<u8>;
     }
 
-    /// ExprKind::Type
-    fn expr_type() {
-        let expr;
-        builtin # type_ascribe(expr, T);
-    }
-
     /// ExprKind::Let
     fn expr_let() {
         let b;

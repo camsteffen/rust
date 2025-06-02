@@ -15,7 +15,6 @@
 #![feature(never_patterns)]
 #![feature(trait_alias)]
 #![feature(try_blocks)]
-#![feature(type_ascription)]
 #![feature(yeet_expr)]
 #![deny(unused_macros)]
 
@@ -119,8 +118,6 @@ fn test_expr() {
     // ExprKind::Cast
     c1!(expr, [ expr as T ], "expr as T");
     c1!(expr, [ expr as T<u8> ], "expr as T<u8>");
-
-    // ExprKind::Type: there is no syntax for type ascription.
 
     // ExprKind::Let
     c1!(expr, [ if let Some(a) = b { c } else { d } ], "if let Some(a) = b { c } else { d }");

@@ -14,8 +14,6 @@
 
 // See also RFC 1445
 
-#![feature(type_ascription)]
-
 #[derive(Copy, Clone, Debug)]
 struct NoPartialEq(u32);
 
@@ -44,9 +42,6 @@ fn main() {
 
     const TUPLE: (OND, OND) = (None, None);
     match (None, None) { TUPLE => dbg!(TUPLE), _ => panic!("whoops"), };
-
-    const TYPE_ASCRIPTION: OND = type_ascribe!(None, OND);
-    match None { TYPE_ASCRIPTION => dbg!(TYPE_ASCRIPTION), _ => panic!("whoops"), };
 
     const ARRAY: [OND; 2] = [None, None];
     match [None; 2] { ARRAY => dbg!(ARRAY), _ => panic!("whoops"), };

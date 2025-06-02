@@ -2,7 +2,6 @@
 // Make sure unused parens lint doesn't emit a false positive.
 // See https://github.com/rust-lang/rust/issues/88519
 #![deny(unused_parens)]
-#![feature(type_ascription)]
 
 // binary ops are tested in issue-71290-unused-paren-binop.rs
 
@@ -46,18 +45,6 @@ mod casts {
     }
     fn inside_if() -> u8 {
         (if false { 0 } else { 0 } as u8)
-    }
-}
-
-mod typeascription {
-    fn outside() -> u8 {
-        type_ascribe!(({ 0 }), u8)
-    }
-    fn outside_match() -> u8 {
-        type_ascribe!((match 0 { x => x }), u8)
-    }
-    fn outside_if() -> u8 {
-        type_ascribe!((if false { 0 } else { 0 }), u8)
     }
 }
 

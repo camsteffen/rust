@@ -2155,8 +2155,6 @@ symbols! {
         ty,
         type_alias_enum_variants,
         type_alias_impl_trait,
-        type_ascribe,
-        type_ascription,
         type_changing_struct_update,
         type_const,
         type_id,

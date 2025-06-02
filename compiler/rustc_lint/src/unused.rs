@@ -713,7 +713,6 @@ trait UnusedDelimLint {
                     ExprKind::Binary(_op, lhs, _rhs) => lhs,
                     ExprKind::Call(fn_, _params) => fn_,
                     ExprKind::Cast(expr, _ty) => expr,
-                    ExprKind::Type(expr, _ty) => expr,
                     ExprKind::Index(base, _subscript, _) => base,
                     _ => break,
                 };
