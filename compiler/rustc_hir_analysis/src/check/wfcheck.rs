@@ -245,7 +245,7 @@ pub(super) fn check_item<'tcx>(
         // won't be allowed unless there's an *explicit* implementation of `Send`
         // for `T`
         hir::ItemKind::Impl(impl_) => {
-            let header = tcx.impl_trait_header(def_id);
+            let header = impl_.of_trait.is_some().then(|| tcx.impl_trait_header(def_id));
             let is_auto = header
                 .is_some_and(|header| tcx.trait_is_auto(header.trait_ref.skip_binder().def_id));
 

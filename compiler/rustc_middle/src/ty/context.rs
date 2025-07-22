@@ -3328,7 +3328,7 @@ impl<'tcx> TyCtxt<'tcx> {
     /// Whether the trait impl is marked const. This does not consider stability or feature gates.
     pub fn is_const_trait_impl(self, def_id: DefId) -> bool {
         self.def_kind(def_id) == DefKind::Impl { of_trait: true }
-            && self.impl_trait_header(def_id).unwrap().constness == hir::Constness::Const
+            && self.impl_trait_header(def_id).constness == hir::Constness::Const
     }
 
     pub fn is_sdylib_interface_build(self) -> bool {
@@ -3387,11 +3387,15 @@ impl<'tcx> TyCtxt<'tcx> {
         self,
         def_id: impl IntoQueryParam<DefId>,
     ) -> Option<ty::EarlyBinder<'tcx, ty::TraitRef<'tcx>>> {
-        Some(self.impl_trait_header(def_id)?.trait_ref)
+        let def_id = def_id.into_query_param();
+        let DefKind::Impl { of_trait } = self.def_kind(def_id) else {
+            panic!("expected impl for {:?}", def_id);
+        };
+        of_trait.then(|| self.impl_trait_header(def_id).trait_ref)
     }
 
     pub fn impl_polarity(self, def_id: impl IntoQueryParam<DefId>) -> ty::ImplPolarity {
-        self.impl_trait_header(def_id).map_or(ty::ImplPolarity::Positive, |h| h.polarity)
+        self.impl_trait_header(def_id).polarity
     }
 
     pub fn needs_coroutine_by_move_body_def_id(self, def_id: DefId) -> bool {

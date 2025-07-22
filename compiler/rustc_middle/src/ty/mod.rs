@@ -1675,8 +1675,8 @@ impl<'tcx> TyCtxt<'tcx> {
         def_id1: DefId,
         def_id2: DefId,
     ) -> Option<ImplOverlapKind> {
-        let impl1 = self.impl_trait_header(def_id1).unwrap();
-        let impl2 = self.impl_trait_header(def_id2).unwrap();
+        let impl1 = self.impl_trait_header(def_id1);
+        let impl2 = self.impl_trait_header(def_id2);
 
         let trait_ref1 = impl1.trait_ref.skip_binder();
         let trait_ref2 = impl2.trait_ref.skip_binder();
@@ -2102,7 +2102,7 @@ impl<'tcx> TyCtxt<'tcx> {
         let def_id: DefId = def_id.into();
         match self.def_kind(def_id) {
             DefKind::Impl { of_trait: true } => {
-                let header = self.impl_trait_header(def_id).unwrap();
+                let header = self.impl_trait_header(def_id);
                 header.constness == hir::Constness::Const
                     && self.is_const_trait(header.trait_ref.skip_binder().def_id)
             }
