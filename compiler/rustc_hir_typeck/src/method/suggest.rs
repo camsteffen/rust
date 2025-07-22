@@ -1832,7 +1832,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                             .tcx
                             .all_impls(def_id)
                             .filter(|&impl_def_id| {
-                                let header = self.tcx.impl_trait_header(impl_def_id).unwrap();
+                                let header = self.tcx.impl_trait_header(impl_def_id);
                                 let trait_ref = header.trait_ref.instantiate(
                                     self.tcx,
                                     self.infcx.fresh_args_for_item(DUMMY_SP, impl_def_id),
@@ -4122,11 +4122,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                     if self
                         .tcx
                         .all_impls(candidate.def_id)
-                        .map(|imp_did| {
-                            self.tcx.impl_trait_header(imp_did).expect(
-                                "inherent impls can't be candidates, only trait impls can be",
-                            )
-                        })
+                        .map(|imp_did| self.tcx.impl_trait_header(imp_did))
                         .filter(|header| header.polarity != ty::ImplPolarity::Positive)
                         .any(|header| {
                             let imp = header.trait_ref.instantiate_identity();
