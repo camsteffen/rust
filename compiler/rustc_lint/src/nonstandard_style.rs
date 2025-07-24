@@ -32,7 +32,7 @@ pub(crate) fn method_context(cx: &LateContext<'_>, id: LocalDefId) -> MethodLate
     match item.container {
         ty::AssocItemContainer::Trait => MethodLateContext::TraitAutoImpl,
         ty::AssocItemContainer::Impl => {
-            if cx.tcx.impl_is_of_trait(item.container_id(cx.tcx)) {
+            if item.trait_item_def_id.is_some() {
                 MethodLateContext::TraitImpl
             } else {
                 MethodLateContext::PlainImpl

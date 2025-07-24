@@ -373,7 +373,7 @@ impl<'tcx> MarkSymbolVisitor<'tcx> {
                 return false;
             }
 
-            if let Some(trait_ref) = self.tcx.impl_trait_ref(impl_of)
+            if let Some(trait_ref) = self.tcx.impl_opt_trait_ref(impl_of)
                 && let trait_ref = trait_ref.instantiate_identity()
                 && let trait_of = trait_ref.def_id
                 && self.tcx.has_attr(trait_of, sym::rustc_trivial_field_reads)
@@ -492,10 +492,9 @@ impl<'tcx> MarkSymbolVisitor<'tcx> {
                 .trait_item_def_id
                 .and_then(|def_id| def_id.as_local()),
             // impl items are live if the corresponding traits are live
-            DefKind::Impl { of_trait: true } => self
-                .tcx
-                .impl_trait_ref(impl_id.owner_id.def_id)
-                .and_then(|trait_ref| trait_ref.skip_binder().def_id.as_local()),
+            DefKind::Impl { of_trait: true } => {
+                self.tcx.impl_trait_ref(impl_id.owner_id.def_id).skip_binder().def_id.as_local()
+            }
             _ => None,
         };
 
