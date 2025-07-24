@@ -2009,6 +2009,14 @@ impl<'tcx> TyCtxt<'tcx> {
         self.impl_trait_header(def_id).map_or(ty::ImplPolarity::Positive, |h| h.polarity)
     }
 
+    pub fn impl_is_of_trait(self, def_id: impl IntoQueryParam<DefId>) -> bool {
+        let def_id = def_id.into_query_param();
+        let DefKind::Impl { of_trait } = self.def_kind(def_id) else {
+            panic!("expected Impl for {def_id:?}");
+        };
+        of_trait
+    }
+
     /// Given an `impl_id`, return the trait it implements.
     /// Return `None` if this is an inherent impl.
     pub fn impl_trait_ref(

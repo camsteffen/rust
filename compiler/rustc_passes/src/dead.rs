@@ -436,7 +436,7 @@ impl<'tcx> MarkSymbolVisitor<'tcx> {
             }
             Node::ImplItem(impl_item) => {
                 let item = self.tcx.local_parent(impl_item.owner_id.def_id);
-                if self.tcx.impl_trait_ref(item).is_none() {
+                if !self.tcx.impl_is_of_trait(item) {
                     //// If it's a type whose items are live, then it's live, too.
                     //// This is done to handle the case where, for example, the static
                     //// method of a private type is used, but the type itself is never
