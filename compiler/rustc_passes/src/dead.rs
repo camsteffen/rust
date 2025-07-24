@@ -373,10 +373,11 @@ impl<'tcx> MarkSymbolVisitor<'tcx> {
                 return false;
             }
 
-            if let Some(trait_of) = self.tcx.trait_id_of_impl(impl_of)
+            if let Some(trait_ref) = self.tcx.impl_trait_ref(impl_of)
+                && let trait_ref = trait_ref.instantiate_identity()
+                && let trait_of = trait_ref.def_id
                 && self.tcx.has_attr(trait_of, sym::rustc_trivial_field_reads)
             {
-                let trait_ref = self.tcx.impl_trait_ref(impl_of).unwrap().instantiate_identity();
                 if let ty::Adt(adt_def, _) = trait_ref.self_ty().kind()
                     && let Some(adt_def_id) = adt_def.did().as_local()
                 {
