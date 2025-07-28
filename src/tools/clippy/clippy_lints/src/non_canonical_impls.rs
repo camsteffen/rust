@@ -117,7 +117,7 @@ impl LateLintPass<'_> for NonCanonicalImpls {
         let Node::Item(item) = cx.tcx.parent_hir_node(impl_item.hir_id()) else {
             return;
         };
-        let Some(trait_impl) = cx.tcx.impl_trait_ref(item.owner_id).map(EarlyBinder::skip_binder) else {
+        let Some(trait_impl) = cx.tcx.impl_opt_trait_ref(item.owner_id).map(EarlyBinder::skip_binder) else {
             return;
         };
         if cx.tcx.is_automatically_derived(item.owner_id.to_def_id()) {

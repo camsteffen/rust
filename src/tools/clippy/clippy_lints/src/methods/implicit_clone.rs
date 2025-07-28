@@ -51,10 +51,9 @@ pub fn is_clone_like(cx: &LateContext<'_>, method_name: Symbol, method_def_id: h
         sym::to_vec => cx
             .tcx
             .impl_of_assoc(method_def_id)
-            .filter(|&impl_did| {
-                cx.tcx.type_of(impl_did).instantiate_identity().is_slice() && cx.tcx.impl_trait_ref(impl_did).is_none()
-            })
-            .is_some(),
+            .is_some_and(|&impl_did| {
+                cx.tcx.type_of(impl_did).instantiate_identity().is_slice() && !cx.tcx.impl_is_of_trait(impl_did)
+            }),
         _ => false,
     }
 }
