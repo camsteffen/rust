@@ -346,12 +346,14 @@ trait VisibilityLike: Sized {
     // associated types for which we can't determine visibility precisely.
     fn of_impl<const SHALLOW: bool>(
         def_id: LocalDefId,
+        of_trait: bool,
         tcx: TyCtxt<'_>,
         effective_visibilities: &EffectiveVisibilities,
     ) -> Self {
         let mut find = FindMin::<_, SHALLOW> { tcx, effective_visibilities, min: Self::MAX };
         find.visit(tcx.type_of(def_id).instantiate_identity());
-        if let Some(trait_ref) = tcx.impl_opt_trait_ref(def_id) {
+        if of_trait {
+            let trait_ref = tcx.impl_trait_ref(def_id);
             find.visit_trait(trait_ref.instantiate_identity());
         }
         find.min
@@ -700,6 +702,7 @@ impl<'tcx> Visitor<'tcx> for EmbargoVisitor<'tcx> {
                 // its trait if it exists (which require reaching the `DefId`s in them).
                 let item_ev = EffectiveVisibility::of_impl::<true>(
                     item.owner_id.def_id,
+                    impl_.of_trait.is_some(),
                     self.tcx,
                     &self.effective_visibilities,
                 );
@@ -1666,7 +1669,8 @@ impl<'tcx> PrivateItemsInPublicInterfacesChecker<'_, 'tcx> {
             // A trait impl is public when both its type and its trait are public
             // Subitems of trait impls have inherited publicity.
             DefKind::Impl { of_trait } => {
-                let impl_vis = ty::Visibility::of_impl::<false>(def_id, tcx, &Default::default());
+                let impl_vis =
+                    ty::Visibility::of_impl::<false>(def_id, of_trait, tcx, &Default::default());
 
                 // We are using the non-shallow version here, unlike when building the
                 // effective visisibilities table to avoid large number of false positives.
@@ -1679,8 +1683,12 @@ impl<'tcx> PrivateItemsInPublicInterfacesChecker<'_, 'tcx> {
                 // lints shouldn't be emitted even if `from` effective visibility
                 // is larger than `Priv` nominal visibility and if `Priv` can leak
                 // in some scenarios due to type inference.
-                let impl_ev =
-                    EffectiveVisibility::of_impl::<false>(def_id, tcx, self.effective_visibilities);
+                let impl_ev = EffectiveVisibility::of_impl::<false>(
+                    def_id,
+                    of_trait,
+                    tcx,
+                    self.effective_visibilities,
+                );
 
                 let mut check = self.check(def_id, impl_vis, Some(impl_ev));
 
