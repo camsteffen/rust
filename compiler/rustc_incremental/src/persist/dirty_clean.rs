@@ -63,8 +63,11 @@ const BASE_HIR: &[&str] = &[
 ];
 
 /// `impl` implementation of struct/trait
-const BASE_IMPL: &[&str] =
-    &[label_strs::associated_item_def_ids, label_strs::generics_of, label_strs::impl_trait_header];
+const BASE_IMPL: &[&str] = &[
+    label_strs::associated_item_def_ids,
+    label_strs::generics_of,
+    label_strs::impl_opt_trait_header,
+];
 
 /// DepNodes for exported mir bodies, which is relevant in "executable"
 /// code, i.e., functions+methods

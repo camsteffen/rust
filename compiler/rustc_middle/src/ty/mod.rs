@@ -2011,6 +2011,15 @@ impl<'tcx> TyCtxt<'tcx> {
         of_trait
     }
 
+    pub fn impl_trait_header(
+        self,
+        def_id: impl IntoQueryParam<DefId>,
+    ) -> ty::ImplTraitHeader<'tcx> {
+        let def_id = def_id.into_query_param();
+        self.impl_opt_trait_header(def_id)
+            .unwrap_or_else(|| panic!("no impl trait header found for {def_id:?}"))
+    }
+
     /// Given an `impl_id`, return the trait it implements.
     pub fn impl_trait_ref(
         self,
