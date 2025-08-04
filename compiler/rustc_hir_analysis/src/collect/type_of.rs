@@ -198,7 +198,7 @@ pub(super) fn type_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::EarlyBinder<'_
                 }
             }
             ImplItemKind::Type(ty) => {
-                if !tcx.impl_is_of_trait(tcx.hir_get_parent_item(hir_id)) {
+                if item.trait_item_def_id.is_none() {
                     check_feature_inherent_assoc_ty(tcx, item.span);
                 }
 

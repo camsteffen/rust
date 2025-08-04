@@ -4,6 +4,7 @@ use std::ops::ControlFlow;
 use rustc_abi::{BackendRepr, TagEncoding, VariantIdx, Variants, WrappingRange};
 use rustc_data_structures::fx::FxHashSet;
 use rustc_errors::DiagMessage;
+use rustc_hir::def::DefKind;
 use rustc_hir::intravisit::VisitorExt;
 use rustc_hir::{AmbigArg, Expr, ExprKind, HirId, LangItem};
 use rustc_middle::bug;
@@ -1904,10 +1905,10 @@ impl InvalidAtomicOrdering {
         if let ExprKind::MethodCall(method_path, _, args, _) = &expr.kind
             && recognized_names.contains(&method_path.ident.name)
             && let Some(m_def_id) = cx.typeck_results().type_dependent_def_id(expr.hir_id)
-            && let Some(impl_did) = cx.tcx.impl_of_assoc(m_def_id)
-            && let Some(adt) = cx.tcx.type_of(impl_did).instantiate_identity().ty_adt_def()
+            && let impl_did = cx.tcx.parent(m_def_id)
             // skip extension traits, only lint functions from the standard library
-            && !cx.tcx.impl_is_of_trait(impl_did)
+            && cx.tcx.def_kind(impl_did) == (DefKind::Impl { of_trait: false })
+            && let Some(adt) = cx.tcx.type_of(impl_did).instantiate_identity().ty_adt_def()
             && let parent = cx.tcx.parent(adt.did())
             && cx.tcx.is_diagnostic_item(sym::atomic_mod, parent)
             && ATOMIC_TYPES.contains(&cx.tcx.item_name(adt.did()))

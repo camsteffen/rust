@@ -180,10 +180,10 @@ impl EffectiveVisibilities {
             // All effective visibilities except `reachable_through_impl_trait` are limited to
             // nominal visibility. For some items nominal visibility doesn't make sense so we
             // don't check this condition for them.
-            let is_impl = matches!(tcx.def_kind(def_id), DefKind::Impl { .. });
-            let is_associated_item_in_trait_impl = tcx
-                .impl_of_assoc(def_id.to_def_id())
-                .is_some_and(|impl_id| tcx.impl_is_of_trait(impl_id));
+            let def_kind = tcx.def_kind(def_id);
+            let is_impl = matches!(def_kind, DefKind::Impl { .. });
+            let is_associated_item_in_trait_impl = def_kind.is_assoc()
+                && tcx.def_kind(tcx.parent(def_id.to_def_id())) == DefKind::Impl { of_trait: true };
             if !is_impl && !is_associated_item_in_trait_impl {
                 let nominal_vis = tcx.visibility(def_id);
                 if !nominal_vis.is_at_least(ev.reachable, tcx) {

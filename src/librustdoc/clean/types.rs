@@ -743,7 +743,7 @@ impl Item {
                     ty::AssocItemContainer::Impl => {
                         // Trait impl items always inherit the impl's visibility --
                         // we don't want to show `pub`.
-                        tcx.impl_is_of_trait(tcx.parent(assoc_item.def_id))
+                        assoc_item.trait_item_def_id.is_some()
                     }
                 };
                 if is_trait_item {
