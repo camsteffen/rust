@@ -2155,7 +2155,7 @@ impl<'tcx> TyCtxt<'tcx> {
         let Some(item) = self.opt_associated_item(def_id) else {
             return false;
         };
-        if item.container != ty::AssocItemContainer::Impl {
+        if item.container != ty::AssocContainer::Impl {
             return false;
         }
 
