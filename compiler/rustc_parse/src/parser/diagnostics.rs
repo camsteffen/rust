@@ -1841,6 +1841,7 @@ impl<'a> Parser<'a> {
 
         // Do not add `::` to expected tokens.
         if self.token == token::PathSep {
+            std::hint::cold_path();
             if let Some(ty) = base.to_ty() {
                 return self.maybe_recover_from_bad_qpath_stage_2(ty.span, ty);
             }

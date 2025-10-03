@@ -5,6 +5,7 @@
 #![allow(rustc::untranslatable_diagnostic)]
 #![feature(assert_matches)]
 #![feature(box_patterns)]
+#![feature(cold_path)]
 #![feature(debug_closure_helpers)]
 #![feature(default_field_values)]
 #![feature(if_let_guard)]

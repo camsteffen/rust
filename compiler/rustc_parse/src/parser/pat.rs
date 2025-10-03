@@ -926,6 +926,7 @@ impl<'a> Parser<'a> {
             // Next token is not `@` so it's not going to be an intersection pattern.
             return Ok(lhs);
         }
+        std::hint::cold_path();
 
         // At this point we attempt to parse `@ $pat_rhs` and emit an error.
         self.bump(); // `@`
@@ -969,6 +970,7 @@ impl<'a> Parser<'a> {
             PatKind::Range(..) => {}
             _ => return,
         }
+        std::hint::cold_path();
 
         self.dcx().emit_err(AmbiguousRangePattern {
             span: pat.span,
