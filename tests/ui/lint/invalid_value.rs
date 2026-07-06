@@ -42,6 +42,20 @@ enum TwoUninhabited {
     B(Void),
 }
 
+enum EnumUninhabitedVisibleStructField {
+    Var(StructUninhabited),
+}
+
+enum EnumUninhabitedPrivateStructField {
+    Var(private::StructUninhabited),
+}
+
+struct StructUninhabited(!);
+
+mod private {
+    pub struct StructUninhabited(!);
+}
+
 pub(crate) struct WrapAroundRange(pattern_type!(i8 is -1..=1));
 
 #[allow(unused)]
@@ -66,6 +80,12 @@ fn main() {
 
         let _val: Void = mem::zeroed(); //~ ERROR: does not permit zero-initialization
         let _val: Void = mem::uninitialized(); //~ ERROR: does not permit being left uninitialized
+
+        let _val: EnumUninhabitedVisibleStructField = mem::zeroed(); //~ ERROR: does not permit zero-initialization
+        let _val: EnumUninhabitedVisibleStructField = mem::uninitialized(); //~ ERROR: does not permit being left uninitialized
+
+        let _val: EnumUninhabitedPrivateStructField = mem::zeroed(); //~ ERROR: does not permit zero-initialization
+        let _val: EnumUninhabitedPrivateStructField = mem::uninitialized(); //~ ERROR: does not permit being left uninitialized
 
         let _val: &'static i32 = mem::zeroed(); //~ ERROR: does not permit zero-initialization
         let _val: &'static i32 = mem::uninitialized(); //~ ERROR: does not permit being left uninitialized
