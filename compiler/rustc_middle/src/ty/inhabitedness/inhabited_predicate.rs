@@ -52,48 +52,38 @@ impl<'tcx> InhabitedPredicate<'tcx> {
         module_def_id: DefId,
         reveal_opaque: &impl Fn(OpaqueTypeKey<'tcx>) -> Option<Ty<'tcx>>,
     ) -> bool {
-        let Ok(result) = self.apply_inner::<!>(
+        self.apply_inner(
             tcx,
             typing_env,
             &mut Default::default(),
-            &|id| Ok(tcx.is_descendant_of(module_def_id, id)),
+            &|id| tcx.is_descendant_of(module_def_id, id),
             reveal_opaque,
-        );
-        result
-    }
-
-    /// Same as `apply`, but returns `None` if self contains a module predicate
-    pub fn apply_any_module(self, tcx: TyCtxt<'tcx>, typing_env: TypingEnv<'tcx>) -> Option<bool> {
-        self.apply_inner(tcx, typing_env, &mut Default::default(), &|_| Err(()), &|_| None).ok()
+        )
     }
 
     /// Same as `apply`, but `NotInModule(_)` predicates yield `false`. That is,
     /// privately uninhabited types are considered always uninhabited.
     pub fn apply_ignore_module(self, tcx: TyCtxt<'tcx>, typing_env: TypingEnv<'tcx>) -> bool {
-        let Ok(result) =
-            self.apply_inner::<!>(tcx, typing_env, &mut Default::default(), &|_| Ok(true), &|_| {
-                None
-            });
-        result
+        self.apply_inner(tcx, typing_env, &mut Default::default(), &|_| true, &|_| None)
     }
 
     #[instrument(level = "debug", skip(tcx, typing_env, in_module, reveal_opaque), ret)]
-    fn apply_inner<E: std::fmt::Debug>(
+    fn apply_inner(
         self,
         tcx: TyCtxt<'tcx>,
         typing_env: TypingEnv<'tcx>,
         eval_stack: &mut SmallVec<[Ty<'tcx>; 1]>, // for cycle detection
-        in_module: &impl Fn(DefId) -> Result<bool, E>,
+        in_module: &impl Fn(DefId) -> bool,
         reveal_opaque: &impl Fn(OpaqueTypeKey<'tcx>) -> Option<Ty<'tcx>>,
-    ) -> Result<bool, E> {
+    ) -> bool {
         match self {
-            Self::False => Ok(false),
-            Self::True => Ok(true),
+            Self::False => false,
+            Self::True => true,
             Self::ConstIsZero(const_) => match const_.try_to_target_usize(tcx) {
-                None | Some(0) => Ok(true),
-                Some(1..) => Ok(false),
+                None | Some(0) => true,
+                Some(1..) => false,
             },
-            Self::NotInModule(id) => in_module(id).map(|in_mod| !in_mod),
+            Self::NotInModule(id) => !in_module(id),
             // `t` may be a projection, for which `inhabited_predicate` returns a `GenericType`. As
             // we have a param_env available, we can do better.
             Self::GenericType(t) => {
@@ -102,12 +92,12 @@ impl<'tcx> InhabitedPredicate<'tcx> {
                     .map_or(self, |t| t.inhabited_predicate(tcx));
                 match normalized_pred {
                     // We don't have more information than we started with, so consider inhabited.
-                    Self::GenericType(_) => Ok(true),
+                    Self::GenericType(_) => true,
                     pred => {
                         // A type which is cyclic when monomorphized can happen here since the
                         // layout error would only trigger later. See e.g. `tests/ui/sized/recursive-type-2.rs`.
                         if eval_stack.contains(&t) {
-                            return Ok(true); // Recover; this will error later.
+                            return true; // Recover; this will error later.
                         }
                         eval_stack.push(t);
                         let ret =
@@ -119,13 +109,13 @@ impl<'tcx> InhabitedPredicate<'tcx> {
             }
             Self::OpaqueType(key) => match reveal_opaque(key) {
                 // Unknown opaque is assumed inhabited.
-                None => Ok(true),
+                None => true,
                 // Known opaque type is inspected recursively.
                 Some(t) => {
                     // A cyclic opaque type can happen in corner cases that would only error later.
                     // See e.g. `tests/ui/type-alias-impl-trait/recursive-tait-conflicting-defn.rs`.
                     if eval_stack.contains(&t) {
-                        return Ok(true); // Recover; this will error later.
+                        return true; // Recover; this will error later.
                     }
                     eval_stack.push(t);
                     let ret = t.inhabited_predicate(tcx).apply_inner(
@@ -139,12 +129,14 @@ impl<'tcx> InhabitedPredicate<'tcx> {
                     ret
                 }
             },
-            Self::And([a, b]) => try_and(a, b, |x| {
-                x.apply_inner(tcx, typing_env, eval_stack, in_module, reveal_opaque)
-            }),
-            Self::Or([a, b]) => try_or(a, b, |x| {
-                x.apply_inner(tcx, typing_env, eval_stack, in_module, reveal_opaque)
-            }),
+            Self::And([a, b]) => {
+                a.apply_inner(tcx, typing_env, eval_stack, in_module, reveal_opaque)
+                    && b.apply_inner(tcx, typing_env, eval_stack, in_module, reveal_opaque)
+            }
+            Self::Or([a, b]) => {
+                a.apply_inner(tcx, typing_env, eval_stack, in_module, reveal_opaque)
+                    || b.apply_inner(tcx, typing_env, eval_stack, in_module, reveal_opaque)
+            }
         }
     }
 
@@ -272,31 +264,5 @@ impl<'tcx> InhabitedPredicate<'tcx> {
                 bug!("unexpected OpaqueType in InhabitedPredicate");
             }
         }
-    }
-}
-
-// this is basically like `f(a)? && f(b)?` but different in the case of
-// `Ok(false) && Err(_) -> Ok(false)`
-fn try_and<T, E>(a: T, b: T, mut f: impl FnMut(T) -> Result<bool, E>) -> Result<bool, E> {
-    let a = f(a);
-    if matches!(a, Ok(false)) {
-        return Ok(false);
-    }
-    match (a, f(b)) {
-        (_, Ok(false)) | (Ok(false), _) => Ok(false),
-        (Ok(true), Ok(true)) => Ok(true),
-        (Err(e), _) | (_, Err(e)) => Err(e),
-    }
-}
-
-fn try_or<T, E>(a: T, b: T, mut f: impl FnMut(T) -> Result<bool, E>) -> Result<bool, E> {
-    let a = f(a);
-    if matches!(a, Ok(true)) {
-        return Ok(true);
-    }
-    match (a, f(b)) {
-        (_, Ok(true)) | (Ok(true), _) => Ok(true),
-        (Ok(false), Ok(false)) => Ok(false),
-        (Err(e), _) | (_, Err(e)) => Err(e),
     }
 }
