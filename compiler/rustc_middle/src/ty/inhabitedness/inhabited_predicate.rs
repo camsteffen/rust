@@ -1,9 +1,10 @@
 use rustc_macros::StableHash;
 use rustc_span::def_id::{LocalModId, ModId};
+use rustc_type_ir::TypeFoldable;
 use smallvec::SmallVec;
 use tracing::instrument;
 
-use crate::ty::{self, OpaqueTypeKey, Ty, TyCtxt, TypingEnv, Unnormalized};
+use crate::ty::{self, EarlyBinder, OpaqueTypeKey, Ty, TyCtxt, TypingEnv, Unnormalized};
 
 /// Represents whether some type is inhabited in a given context.
 /// Examples of uninhabited types are `!`, `enum Void {}`, or a struct
@@ -23,8 +24,9 @@ pub enum InhabitedPredicate<'tcx> {
     /// type has restricted visibility.
     NotInModule(ModId),
     /// Inhabited if some generic type is inhabited.
-    /// These are replaced by calling [`Self::instantiate`].
     GenericType(Ty<'tcx>),
+    /// Nested types are lazily instantiated with the generic args
+    Instantiate(&'tcx InhabitedPredicate<'tcx>, ty::GenericArgsRef<'tcx>),
     /// Inhabited if either we don't know the hidden type or we know it and it is inhabited.
     OpaqueType(OpaqueTypeKey<'tcx>),
     /// A AND B
@@ -85,6 +87,7 @@ impl<'tcx> InhabitedPredicate<'tcx> {
         InhabitedPredicateEval {
             tcx,
             typing_env,
+            args: None,
             in_module,
             reveal_opaque,
             eval_stack: Default::default(),
@@ -135,6 +138,12 @@ impl<'tcx> InhabitedPredicate<'tcx> {
                 Some(Self::NotInModule(a))
             }
             (Self::GenericType(a), Self::GenericType(b)) if a == b => Some(Self::GenericType(a)),
+            (Self::Instantiate(&a, a_args), Self::Instantiate(&b, b_args))
+                if a_args == b_args
+                    && let Some(c) = a.reduce_and(tcx, b) =>
+            {
+                Some(Self::Instantiate(tcx.arena.alloc(c), a_args))
+            }
             (Self::And(&[a, b]), c) | (c, Self::And(&[a, b])) => {
                 if let Some(ac) = a.reduce_and(tcx, c) {
                     Some(ac.and(tcx, b))
@@ -161,6 +170,12 @@ impl<'tcx> InhabitedPredicate<'tcx> {
                 Some(Self::NotInModule(b))
             }
             (Self::GenericType(a), Self::GenericType(b)) if a == b => Some(Self::GenericType(a)),
+            (Self::Instantiate(&a, a_args), Self::Instantiate(&b, b_args))
+                if a_args == b_args
+                    && let Some(c) = a.reduce_or(tcx, b) =>
+            {
+                Some(Self::Instantiate(tcx.arena.alloc(c), a_args))
+            }
             (Self::Or(&[a, b]), c) | (c, Self::Or(&[a, b])) => {
                 if let Some(ac) = a.reduce_or(tcx, c) {
                     Some(ac.or(tcx, b))
@@ -174,47 +189,10 @@ impl<'tcx> InhabitedPredicate<'tcx> {
         }
     }
 
-    /// Replaces generic types with its corresponding predicate
     pub fn instantiate(self, tcx: TyCtxt<'tcx>, args: ty::GenericArgsRef<'tcx>) -> Self {
-        self.instantiate_opt(tcx, args).unwrap_or(self)
-    }
-
-    /// Same as [`Self::instantiate`], but if there is no generics to
-    /// instantiate, returns `None`. This is useful because it lets us avoid
-    /// allocating a recursive copy of everything when the result is unchanged.
-    ///
-    /// Only used to implement `instantiate` itself.
-    fn instantiate_opt(self, tcx: TyCtxt<'tcx>, args: ty::GenericArgsRef<'tcx>) -> Option<Self> {
         match self {
-            Self::ConstIsZero(c) => {
-                let c = ty::EarlyBinder::bind(tcx, c).instantiate(tcx, args).skip_norm_wip();
-                let pred = match c.try_to_target_usize(tcx) {
-                    Some(0) => Self::True,
-                    Some(1..) => Self::False,
-                    None => Self::ConstIsZero(c),
-                };
-                Some(pred)
-            }
-            Self::GenericType(t) => Some(
-                ty::EarlyBinder::bind(tcx, t)
-                    .instantiate(tcx, args)
-                    .skip_norm_wip()
-                    .inhabited_predicate(tcx),
-            ),
-            Self::And(&[a, b]) => match a.instantiate_opt(tcx, args) {
-                None => b.instantiate_opt(tcx, args).map(|b| a.and(tcx, b)),
-                Some(InhabitedPredicate::False) => Some(InhabitedPredicate::False),
-                Some(a) => Some(a.and(tcx, b.instantiate_opt(tcx, args).unwrap_or(b))),
-            },
-            Self::Or(&[a, b]) => match a.instantiate_opt(tcx, args) {
-                None => b.instantiate_opt(tcx, args).map(|b| a.or(tcx, b)),
-                Some(InhabitedPredicate::True) => Some(InhabitedPredicate::True),
-                Some(a) => Some(a.or(tcx, b.instantiate_opt(tcx, args).unwrap_or(b))),
-            },
-            Self::True | Self::False | Self::NotInModule(_) => None,
-            Self::OpaqueType(_) => {
-                bug!("unexpected OpaqueType in InhabitedPredicate");
-            }
+            Self::True | Self::False => self,
+            _ => Self::Instantiate(tcx.arena.alloc(self), args),
         }
     }
 }
@@ -222,6 +200,7 @@ impl<'tcx> InhabitedPredicate<'tcx> {
 struct InhabitedPredicateEval<'tcx, InModule, RevealOpaque> {
     tcx: TyCtxt<'tcx>,
     typing_env: TypingEnv<'tcx>,
+    args: Option<ty::GenericArgsRef<'tcx>>,
     eval_stack: SmallVec<[Ty<'tcx>; 1]>,
     in_module: InModule,
     reveal_opaque: RevealOpaque,
@@ -233,7 +212,7 @@ where
     RevealOpaque: Fn(OpaqueTypeKey<'tcx>) -> Option<Ty<'tcx>>,
 {
     fn eval_pred(&mut self, pred: InhabitedPredicate<'tcx>) -> Result<bool, E> {
-        let Self { tcx, typing_env, .. } = *self;
+        let tcx = self.tcx;
         match pred {
             InhabitedPredicate::False => Ok(false),
             InhabitedPredicate::True => Ok(true),
@@ -245,44 +224,69 @@ where
             // `t` may be a projection, for which `inhabited_predicate` returns a `GenericType`. As
             // we have a param_env available, we can do better.
             InhabitedPredicate::GenericType(t) => {
-                let normalized_pred = tcx
-                    .try_normalize_erasing_regions(typing_env, Unnormalized::new_wip(t))
-                    .map_or(pred, |t| t.inhabited_predicate(tcx));
-                match normalized_pred {
-                    // We don't have more information than we started with, so consider inhabited.
-                    InhabitedPredicate::GenericType(_) => Ok(true),
-                    pred => {
-                        // A type which is cyclic when monomorphized can happen here since the
-                        // layout error would only trigger later. See e.g. `tests/ui/sized/recursive-type-2.rs`.
-                        if self.eval_stack.contains(&t) {
-                            return Ok(true); // Recover; this will error later.
-                        }
-                        self.eval_stack.push(t);
-                        let ret = self.eval_pred(pred);
-                        self.eval_stack.pop();
-                        ret
+                // A type which is cyclic when monomorphized can happen here since the
+                // layout error would only trigger later. See e.g. `tests/ui/sized/recursive-type-2.rs`.
+                self.eval_ty(t)
+            }
+            InhabitedPredicate::Instantiate(&pred, args) => {
+                let next_args = self.instantiate(args).unwrap_or(args);
+                let args_prev = std::mem::replace(&mut self.args, Some(next_args));
+                let out = self.eval_pred(pred);
+                self.args = args_prev;
+                out
+            }
+            InhabitedPredicate::OpaqueType(key) => {
+                assert!(
+                    self.args.is_none(),
+                    "InhabitedPredicate::OpaqueType should not be instantiated"
+                );
+                match (self.reveal_opaque)(key) {
+                    // Unknown opaque is assumed inhabited.
+                    None => Ok(true),
+                    // Known opaque type is inspected recursively.
+                    Some(t) => {
+                        // A cyclic opaque type can happen in corner cases that would only error later.
+                        // See e.g. `tests/ui/type-alias-impl-trait/recursive-tait-conflicting-defn.rs`.
+                        self.eval_ty(t)
                     }
                 }
             }
-            InhabitedPredicate::OpaqueType(key) => match (self.reveal_opaque)(key) {
-                // Unknown opaque is assumed inhabited.
-                None => Ok(true),
-                // Known opaque type is inspected recursively.
-                Some(t) => {
-                    // A cyclic opaque type can happen in corner cases that would only error later.
-                    // See e.g. `tests/ui/type-alias-impl-trait/recursive-tait-conflicting-defn.rs`.
-                    if self.eval_stack.contains(&t) {
-                        return Ok(true); // Recover; this will error later.
-                    }
-                    self.eval_stack.push(t);
-                    let ret = self.eval_pred(t.inhabited_predicate(tcx));
-                    self.eval_stack.pop();
-                    ret
-                }
-            },
             InhabitedPredicate::And([a, b]) => try_and(a, b, |&pred| self.eval_pred(pred)),
             InhabitedPredicate::Or([a, b]) => try_or(a, b, |&pred| self.eval_pred(pred)),
         }
+    }
+
+    fn eval_ty(&mut self, t: Ty<'tcx>) -> Result<bool, E> {
+        if self.eval_stack.contains(&t) {
+            return Ok(true); // Recover; this will error later.
+        }
+        self.eval_stack.push(t);
+        let ret = match self.instantiate(t) {
+            // We don't have more information than we started with, so consider inhabited.
+            None => Ok(true),
+            Some(t) => {
+                let pred = t.inhabited_predicate(self.tcx);
+                let args_prev = self.args.take();
+                let ret = self.eval_pred(pred);
+                self.args = args_prev;
+                ret
+            }
+        };
+        self.eval_stack.pop();
+        ret
+    }
+
+    fn instantiate<T: TypeFoldable<TyCtxt<'tcx>> + Copy>(&self, t: T) -> Option<T> {
+        let Some(args) = self.args else {
+            return None;
+        };
+        let mut t = EarlyBinder::bind(self.tcx, t).instantiate(self.tcx, args).skip_norm_wip();
+        if let Ok(norm) =
+            self.tcx.try_normalize_erasing_regions(self.typing_env, Unnormalized::new_wip(t))
+        {
+            t = norm;
+        }
+        Some(t)
     }
 }
 
