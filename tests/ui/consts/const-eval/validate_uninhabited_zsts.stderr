@@ -1,21 +1,21 @@
-error[E0080]: constructing invalid value of type !: encountered a value of the never type `!`
-  --> $DIR/validate_uninhabited_zsts.rs:17:33
-   |
-LL | const FOO: [empty::Empty; 3] = [foo(); 3];
-   |                                 ^^^^^ evaluation of `FOO` failed inside this call
-   |
-note: inside `foo`
+error[E0512]: cannot transmute between types of different sizes, or dependently-sized types
   --> $DIR/validate_uninhabited_zsts.rs:4:14
    |
 LL |     unsafe { std::mem::transmute(()) }
-   |              ^^^^^^^^^^^^^^^^^^^^^^^ the failure occurred here
+   |              ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: source type: `()` (0 bits)
+   = note: target type: `!` (uninhabited)
 
-error[E0080]: constructing invalid value of type empty::Empty: at .0, encountered a value of zero-variant enum `Void`
+error[E0512]: cannot transmute between types of different sizes, or dependently-sized types
   --> $DIR/validate_uninhabited_zsts.rs:20:42
    |
 LL | const BAR: [empty::Empty; 3] = [unsafe { std::mem::transmute(()) }; 3];
-   |                                          ^^^^^^^^^^^^^^^^^^^^^^^ evaluation of `BAR` failed here
+   |                                          ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: source type: `()` (0 bits)
+   = note: target type: `empty::Empty` (uninhabited)
 
 error: aborting due to 2 previous errors
 
-For more information about this error, try `rustc --explain E0080`.
+For more information about this error, try `rustc --explain E0512`.

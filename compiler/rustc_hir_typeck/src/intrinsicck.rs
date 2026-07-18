@@ -56,6 +56,7 @@ fn skeleton_string<'tcx>(
                 bug!("{:?} overflow for u128", size)
             }
         }
+        Ok(SizeSkeleton::Uninhabited) => "uninhabited".to_string(),
         Err(LayoutError::TooGeneric(bad)) => {
             if *bad == ty {
                 "this type does not have a fixed size".to_owned()

@@ -325,6 +325,8 @@ pub enum SizeSkeleton<'tcx> {
         /// depending on one, with regions erased.
         tail: Ty<'tcx>,
     },
+
+    Uninhabited,
 }
 
 impl<'tcx> SizeSkeleton<'tcx> {
@@ -367,7 +369,9 @@ impl<'tcx> SizeSkeleton<'tcx> {
         // First try computing a static layout.
         let err = match tcx.layout_of(typing_env.as_query_input(ty)) {
             Ok(layout) => {
-                if layout.is_sized() {
+                if layout.is_uninhabited() {
+                    return Ok(SizeSkeleton::Uninhabited);
+                } else if layout.is_sized() {
                     return Ok(SizeSkeleton::Known(layout.size, Some(layout.align.abi)));
                 } else {
                     // Just to be safe, don't claim a known layout for unsized types.
@@ -452,6 +456,11 @@ impl<'tcx> SizeSkeleton<'tcx> {
                         Err(err)
                     }
                     SizeSkeleton::Pointer { .. } => Err(err),
+                    SizeSkeleton::Uninhabited => match len_eval {
+                        Some(0) => unreachable!(),
+                        Some(1..) => Ok(SizeSkeleton::Uninhabited),
+                        None => Err(err),
+                    },
                 }
             }
 
@@ -519,6 +528,7 @@ impl<'tcx> SizeSkeleton<'tcx> {
                                 }
                                 ptr = Some(field);
                             }
+                            SizeSkeleton::Uninhabited => return Err(err),
                         }
                     }
                     Ok(ptr)
@@ -566,7 +576,7 @@ impl<'tcx> SizeSkeleton<'tcx> {
                     // But in the case of `!null` patterns we need to note that in the
                     // raw pointer.
                     ty::PatternKind::NotNull => match base? {
-                        SizeSkeleton::Known(..) => base,
+                        SizeSkeleton::Known(..) | SizeSkeleton::Uninhabited => base,
                         SizeSkeleton::Pointer { non_zero: _, tail } => {
                             Ok(SizeSkeleton::Pointer { non_zero: true, tail })
                         }
@@ -578,12 +588,17 @@ impl<'tcx> SizeSkeleton<'tcx> {
         }
     }
 
+    pub fn is_uninhabited(self) -> bool {
+        matches!(self, SizeSkeleton::Uninhabited)
+    }
+
     pub fn same_size(self, other: SizeSkeleton<'tcx>) -> bool {
         match (self, other) {
             (SizeSkeleton::Known(a, _), SizeSkeleton::Known(b, _)) => a == b,
             (SizeSkeleton::Pointer { tail: a, .. }, SizeSkeleton::Pointer { tail: b, .. }) => {
                 a == b
             }
+            (SizeSkeleton::Uninhabited, SizeSkeleton::Uninhabited) => true,
             _ => false,
         }
     }

@@ -39,21 +39,27 @@ LL |     static NEVER: !;
    = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
    = note: for more information, see issue #74840 <https://github.com/rust-lang/rust/issues/74840>
 
-error[E0080]: constructing invalid value of type Void: encountered a value of zero-variant enum `Void`
+error[E0512]: cannot transmute between types of different sizes, or dependently-sized types
   --> $DIR/uninhabited-static.rs:11:31
    |
 LL | static VOID2: Void = unsafe { std::mem::transmute(()) };
-   |                               ^^^^^^^^^^^^^^^^^^^^^^^ evaluation of `VOID2` failed here
+   |                               ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: source type: `()` (0 bits)
+   = note: target type: `Void` (uninhabited)
 
-error[E0080]: constructing invalid value of type Void: encountered a value of zero-variant enum `Void`
+error[E0512]: cannot transmute between types of different sizes, or dependently-sized types
   --> $DIR/uninhabited-static.rs:14:32
    |
 LL | static NEVER2: Void = unsafe { std::mem::transmute(()) };
-   |                                ^^^^^^^^^^^^^^^^^^^^^^^ evaluation of `NEVER2` failed here
+   |                                ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: source type: `()` (0 bits)
+   = note: target type: `Void` (uninhabited)
 
 error: aborting due to 6 previous errors
 
-For more information about this error, try `rustc --explain E0080`.
+For more information about this error, try `rustc --explain E0512`.
 Future incompatibility report: Future breakage diagnostic:
 error: static of uninhabited type
   --> $DIR/uninhabited-static.rs:11:1
