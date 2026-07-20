@@ -313,11 +313,6 @@ impl<'tcx> TypeFoldable<TyCtxt<'tcx>> for Pattern<'tcx> {
         let pat = (*self).clone().try_fold_with(folder)?;
         Ok(if pat == *self { self } else { folder.cx().mk_pat(pat) })
     }
-
-    fn fold_with<F: TypeFolder<TyCtxt<'tcx>>>(self, folder: &mut F) -> Self {
-        let pat = (*self).clone().fold_with(folder);
-        if pat == *self { self } else { folder.cx().mk_pat(pat) }
-    }
 }
 
 impl<'tcx> TypeVisitable<TyCtxt<'tcx>> for Pattern<'tcx> {
@@ -332,10 +327,6 @@ impl<'tcx> TypeFoldable<TyCtxt<'tcx>> for Ty<'tcx> {
         folder: &mut F,
     ) -> Result<Self, F::Error> {
         folder.try_fold_ty(self)
-    }
-
-    fn fold_with<F: TypeFolder<TyCtxt<'tcx>>>(self, folder: &mut F) -> Self {
-        folder.fold_ty(self)
     }
 }
 
@@ -492,10 +483,6 @@ impl<'tcx> TypeFoldable<TyCtxt<'tcx>> for ty::Region<'tcx> {
     ) -> Result<Self, F::Error> {
         folder.try_fold_region(self)
     }
-
-    fn fold_with<F: TypeFolder<TyCtxt<'tcx>>>(self, folder: &mut F) -> Self {
-        folder.fold_region(self)
-    }
 }
 
 impl<'tcx> TypeVisitable<TyCtxt<'tcx>> for ty::Region<'tcx> {
@@ -511,10 +498,6 @@ impl<'tcx> TypeFoldable<TyCtxt<'tcx>> for ty::Predicate<'tcx> {
     ) -> Result<Self, F::Error> {
         folder.try_fold_predicate(self)
     }
-
-    fn fold_with<F: TypeFolder<TyCtxt<'tcx>>>(self, folder: &mut F) -> Self {
-        folder.fold_predicate(self)
-    }
 }
 
 // FIXME(clause): This is wonky
@@ -525,10 +508,6 @@ impl<'tcx> TypeFoldable<TyCtxt<'tcx>> for ty::Clause<'tcx> {
     ) -> Result<Self, F::Error> {
         Ok(folder.try_fold_predicate(self.as_predicate())?.expect_clause())
     }
-
-    fn fold_with<F: TypeFolder<TyCtxt<'tcx>>>(self, folder: &mut F) -> Self {
-        folder.fold_predicate(self.as_predicate()).expect_clause()
-    }
 }
 
 impl<'tcx> TypeFoldable<TyCtxt<'tcx>> for ty::Clauses<'tcx> {
@@ -537,10 +516,6 @@ impl<'tcx> TypeFoldable<TyCtxt<'tcx>> for ty::Clauses<'tcx> {
         folder: &mut F,
     ) -> Result<Self, F::Error> {
         folder.try_fold_clauses(self)
-    }
-
-    fn fold_with<F: TypeFolder<TyCtxt<'tcx>>>(self, folder: &mut F) -> Self {
-        folder.fold_clauses(self)
     }
 }
 
@@ -616,10 +591,6 @@ impl<'tcx> TypeFoldable<TyCtxt<'tcx>> for ty::Const<'tcx> {
         folder: &mut F,
     ) -> Result<Self, F::Error> {
         folder.try_fold_const(self)
-    }
-
-    fn fold_with<F: TypeFolder<TyCtxt<'tcx>>>(self, folder: &mut F) -> Self {
-        folder.fold_const(self)
     }
 }
 
@@ -706,13 +677,6 @@ impl<'tcx> TypeFoldable<TyCtxt<'tcx>> for ty::ValTree<'tcx> {
             Ok(valtree)
         }
     }
-
-    fn fold_with<F: TypeFolder<TyCtxt<'tcx>>>(self, folder: &mut F) -> Self {
-        let inner: &ty::ValTreeKind<TyCtxt<'tcx>> = &*self;
-        let new_inner = inner.clone().fold_with(folder);
-
-        if inner == &new_inner { self } else { folder.cx().intern_valtree(new_inner) }
-    }
 }
 
 impl<'tcx> TypeVisitable<TyCtxt<'tcx>> for rustc_span::ErrorGuaranteed {
@@ -727,10 +691,6 @@ impl<'tcx> TypeFoldable<TyCtxt<'tcx>> for rustc_span::ErrorGuaranteed {
         _folder: &mut F,
     ) -> Result<Self, F::Error> {
         Ok(self)
-    }
-
-    fn fold_with<F: TypeFolder<TyCtxt<'tcx>>>(self, _folder: &mut F) -> Self {
-        self
     }
 }
 
@@ -774,10 +734,6 @@ impl<'tcx> TypeFoldable<TyCtxt<'tcx>> for &'tcx ty::List<LocalDefId> {
     ) -> Result<Self, F::Error> {
         Ok(self)
     }
-
-    fn fold_with<F: TypeFolder<TyCtxt<'tcx>>>(self, _folder: &mut F) -> Self {
-        self
-    }
 }
 
 macro_rules! list_fold {
@@ -789,13 +745,6 @@ macro_rules! list_fold {
                     folder: &mut F,
                 ) -> Result<Self, F::Error> {
                     ty::util::try_fold_list(self, folder, |tcx, v| tcx.$mk(v))
-                }
-
-                fn fold_with<F: TypeFolder<TyCtxt<'tcx>>>(
-                    self,
-                    folder: &mut F,
-                ) -> Self {
-                    ty::util::fold_list(self, folder, |tcx, v| tcx.$mk(v))
                 }
             }
         )*
